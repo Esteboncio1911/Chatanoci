@@ -504,11 +504,6 @@
             display: flex;
             flex-direction: column;
             background: var(--bg-chat);
-            display: none;
-        }
-        
-        .chat-panel.active {
-            display: flex;
         }
         
         .chat-header {
@@ -535,6 +530,7 @@
             justify-content: center;
             min-width: 44px;
             min-height: 44px;
+            display: none;
         }
         
         .chat-avatar-wrapper {
@@ -576,7 +572,7 @@
             opacity: 0.85;
         }
         
-        /* ✅ SCROLL SOLO EN MENSAJES */
+        /* ✅ SCROLL EN MENSAJES */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -658,18 +654,13 @@
             margin-left: 0.5rem;
         }
         
-        /* ✅ INPUT AREA SIN SCROLL */
+        /* ✅ INPUT FIJO ABAJO EN MÓVIL */
         .chat-input-area {
             background: var(--bg-white);
             border-top: 1px solid var(--border);
             flex-shrink: 0;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        
-        .chat-input-content {
             padding: 0.75rem 1rem;
-            max-height: 300px;
-            overflow-y: auto;
+            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
         }
         
         .image-preview-container {
@@ -927,24 +918,48 @@
             background: #909090;
         }
 
-        /* Desktop Styles */
+        /* ✅ ESTILOS MÓVIL */
+        @media (max-width: 767px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 100;
+            }
+            
+            .sidebar.hidden-mobile {
+                display: none;
+            }
+            
+            .chat-panel {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 101;
+                display: none;
+            }
+            
+            .chat-panel.active-mobile {
+                display: flex;
+            }
+            
+            .btn-back {
+                display: flex;
+            }
+        }
+
+        /* ✅ ESTILOS DESKTOP */
         @media (min-width: 768px) {
             .app-container {
                 box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
             }
 
-            /* ✅ SIDEBAR SIEMPRE VISIBLE EN DESKTOP */
             .sidebar {
                 width: 380px;
-            }
-
-            /* ✅ CHAT SIEMPRE VISIBLE EN DESKTOP */
-            .chat-panel {
-                display: flex;
-            }
-
-            .btn-back {
-                display: none;
             }
 
             .contact-item:hover {
@@ -1082,21 +1097,19 @@
                 <div class="messages-container" id="messagesContainer"></div>
                 
                 <div class="chat-input-area">
-                    <div class="chat-input-content">
-                        <div class="image-preview-container" id="imagePreviewContainer">
-                            <img id="imagePreview" class="image-preview" src="" alt="Vista previa">
-                            <div class="preview-options">
-                                <button class="btn-preview btn-preview-cancel" onclick="app.cancelImagePreview()">Cancelar</button>
-                                <button class="btn-preview btn-preview-view-once" onclick="app.sendImageViewOnce()">👁️ Ver 1x</button>
-                                <button class="btn-preview btn-preview-send" onclick="app.sendImageNormal()">📤 Enviar</button>
-                            </div>
+                    <div class="image-preview-container" id="imagePreviewContainer">
+                        <img id="imagePreview" class="image-preview" src="" alt="Vista previa">
+                        <div class="preview-options">
+                            <button class="btn-preview btn-preview-cancel" onclick="app.cancelImagePreview()">Cancelar</button>
+                            <button class="btn-preview btn-preview-view-once" onclick="app.sendImageViewOnce()">👁️ Ver 1x</button>
+                            <button class="btn-preview btn-preview-send" onclick="app.sendImageNormal()">📤 Enviar</button>
                         </div>
-                        
-                        <div class="chat-input-wrapper">
-                            <button class="btn-input-action" onclick="app.attachImage()" title="Enviar imagen">📷</button>
-                            <textarea class="chat-input" id="messageInput" placeholder="Escribe un mensaje" rows="1"></textarea>
-                            <button class="btn-send" onclick="app.sendMessage()">➤</button>
-                        </div>
+                    </div>
+                    
+                    <div class="chat-input-wrapper">
+                        <button class="btn-input-action" onclick="app.attachImage()" title="Enviar imagen">📷</button>
+                        <textarea class="chat-input" id="messageInput" placeholder="Escribe un mensaje" rows="1"></textarea>
+                        <button class="btn-send" onclick="app.sendMessage()">➤</button>
                     </div>
                 </div>
             </div>
@@ -1492,10 +1505,10 @@
                 this.activeContact.unreadCount = 0;
                 this.saveContacts();
 
-                // ✅ EN MÓVIL: ocultar sidebar
+                // ✅ SOLO EN MÓVIL: ocultar sidebar
                 if (this.isMobile) {
-                    document.getElementById('sidebar').style.display = 'none';
-                    document.getElementById('chatPanel').classList.add('active');
+                    document.getElementById('sidebar').classList.add('hidden-mobile');
+                    document.getElementById('chatPanel').classList.add('active-mobile');
                 }
 
                 document.getElementById('emptyChatState').classList.add('hidden');
@@ -1520,16 +1533,16 @@
 
             backToContacts() {
                 if (this.isMobile) {
-                    document.getElementById('sidebar').style.display = 'flex';
-                    document.getElementById('chatPanel').classList.remove('active');
+                    document.getElementById('sidebar').classList.remove('hidden-mobile');
+                    document.getElementById('chatPanel').classList.remove('active-mobile');
                 }
                 this.setTypingStatus(false);
             }
 
             updateLayout() {
                 if (!this.isMobile) {
-                    document.getElementById('sidebar').style.display = 'flex';
-                    document.getElementById('chatPanel').classList.remove('active');
+                    document.getElementById('sidebar').classList.remove('hidden-mobile');
+                    document.getElementById('chatPanel').classList.remove('active-mobile');
                 }
             }
 
