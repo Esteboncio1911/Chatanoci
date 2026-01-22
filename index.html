@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Chat Anónimo Cifrado</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -51,7 +49,6 @@
             background: var(--bg-white);
         }
         
-        /* Sidebar */
         .sidebar {
             width: 100%;
             display: flex;
@@ -160,7 +157,6 @@
             cursor: pointer;
             border-bottom: 1px solid var(--border);
             transition: background 0.15s;
-            position: relative;
         }
         
         .contact-item:active {
@@ -229,21 +225,12 @@
             white-space: nowrap;
         }
         
-        .contact-time {
-            font-size: 0.6875rem;
-            color: var(--text-secondary);
-            margin-left: 0.5rem;
-        }
-        
         .contact-message {
             font-size: 0.8125rem;
             color: var(--text-secondary);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
         }
         
         .contact-message.unread {
@@ -324,10 +311,6 @@
             box-shadow: 0 2px 8px rgba(91, 124, 153, 0.2);
         }
         
-        .btn-copy:active {
-            transform: scale(0.98);
-        }
-        
         .form-group {
             margin-bottom: 1.25rem;
         }
@@ -359,11 +342,6 @@
             box-shadow: 0 0 0 4px rgba(91, 124, 153, 0.1);
         }
         
-        .form-input::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.6;
-        }
-        
         .btn-add {
             width: 100%;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -377,10 +355,6 @@
             transition: all 0.2s;
             min-height: 52px;
             box-shadow: 0 4px 12px rgba(91, 124, 153, 0.2);
-        }
-        
-        .btn-add:active {
-            transform: scale(0.98);
         }
         
         .profile-photo-section {
@@ -498,12 +472,13 @@
             left: 22px;
         }
         
-        /* Chat Panel */
+        /* ✅ CHAT PANEL - FONDO FIJO */
         .chat-panel {
             flex: 1;
             display: flex;
             flex-direction: column;
             background: var(--bg-chat);
+            position: relative;
         }
         
         .chat-header {
@@ -515,6 +490,8 @@
             min-height: 56px;
             border-bottom: 1px solid var(--primary-dark);
             flex-shrink: 0;
+            position: relative;
+            z-index: 10;
         }
         
         .btn-back {
@@ -525,12 +502,9 @@
             cursor: pointer;
             padding: 0.5rem;
             margin-right: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: none;
             min-width: 44px;
             min-height: 44px;
-            display: none;
         }
         
         .chat-avatar-wrapper {
@@ -572,13 +546,22 @@
             opacity: 0.85;
         }
         
-        /* ✅ SCROLL EN MENSAJES */
-        .messages-container {
+        /* ✅ MENSAJES - WRAPPER CON SCROLL */
+        .messages-wrapper {
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
+            position: relative;
             -webkit-overflow-scrolling: touch;
+        }
+        
+        /* ✅ CONTENEDOR DE MENSAJES - SIN SCROLL */
+        .messages-container {
+            min-height: 100%;
             padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
         }
         
         .message {
@@ -595,7 +578,6 @@
         .message-bubble {
             padding: 0.625rem 0.875rem 0.75rem;
             border-radius: 12px;
-            position: relative;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
             max-width: 100%;
         }
@@ -654,13 +636,14 @@
             margin-left: 0.5rem;
         }
         
-        /* ✅ INPUT FIJO ABAJO EN MÓVIL */
         .chat-input-area {
             background: var(--bg-white);
             border-top: 1px solid var(--border);
             flex-shrink: 0;
             padding: 0.75rem 1rem;
             padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+            position: relative;
+            z-index: 10;
         }
         
         .image-preview-container {
@@ -685,7 +668,6 @@
         .preview-options {
             display: flex;
             gap: 0.5rem;
-            flex-wrap: wrap;
         }
         
         .btn-preview {
@@ -696,7 +678,6 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.2s;
             font-size: 0.8125rem;
         }
         
@@ -733,12 +714,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
             flex-shrink: 0;
-        }
-        
-        .btn-input-action:active {
-            background: var(--hover);
         }
         
         .chat-input {
@@ -752,7 +728,6 @@
             resize: none;
             max-height: 120px;
             min-height: 44px;
-            transition: all 0.2s;
         }
         
         .chat-input:focus {
@@ -773,13 +748,7 @@
             align-items: center;
             justify-content: center;
             font-size: 1.25rem;
-            transition: all 0.2s;
             flex-shrink: 0;
-        }
-        
-        .btn-send:active {
-            background: var(--primary-dark);
-            transform: scale(0.95);
         }
         
         .modal-overlay {
@@ -901,12 +870,10 @@
         
         ::-webkit-scrollbar {
             width: 12px;
-            height: 12px;
         }
         
         ::-webkit-scrollbar-track {
             background: var(--bg-light);
-            border-radius: 6px;
         }
         
         ::-webkit-scrollbar-thumb {
@@ -918,7 +885,6 @@
             background: #909090;
         }
 
-        /* ✅ ESTILOS MÓVIL */
         @media (max-width: 767px) {
             .sidebar {
                 position: fixed;
@@ -952,12 +918,7 @@
             }
         }
 
-        /* ✅ ESTILOS DESKTOP */
         @media (min-width: 768px) {
-            .app-container {
-                box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
-            }
-
             .sidebar {
                 width: 380px;
             }
@@ -970,41 +931,13 @@
                 background: rgba(255, 255, 255, 0.1);
             }
 
-            .btn-input-action:hover {
-                background: var(--hover);
-            }
-
-            .btn-send:hover {
-                background: var(--primary-dark);
-                transform: scale(1.05);
-            }
-
             .message {
                 max-width: 65%;
-            }
-
-            .notification {
-                left: auto;
-                right: 1.5rem;
-                bottom: auto;
-                top: 1.5rem;
-                max-width: 400px;
             }
 
             .code-display {
                 flex-direction: row;
                 align-items: center;
-            }
-
-            @keyframes slideUp {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
             }
         }
     </style>
@@ -1016,7 +949,7 @@
                 <h1 class="sidebar-title">🔐 Chat Cifrado</h1>
                 <div class="header-icons">
                     <div class="connection-status" id="connectionStatus">●</div>
-                    <button class="btn-header" onclick="app.openSettings()" title="Ajustes">⚙️</button>
+                    <button class="btn-header" onclick="app.openSettings()">⚙️</button>
                 </div>
             </div>
             
@@ -1033,17 +966,14 @@
             <div class="tab-content" id="tab-add">
                 <div class="add-contact-section">
                     <h2 class="section-title">Añadir Contacto</h2>
-                    
                     <div class="form-group">
                         <label class="form-label">Código del contacto</label>
                         <input type="text" class="form-input" id="contactIdInput" placeholder="user_abc123...">
                     </div>
-                    
                     <div class="form-group">
                         <label class="form-label">Nombre del contacto</label>
                         <input type="text" class="form-input" id="contactNameInput" placeholder="Juan, María...">
                     </div>
-                    
                     <button class="btn-add" onclick="app.addContact()">Agregar Contacto</button>
                 </div>
             </div>
@@ -1051,14 +981,12 @@
             <div class="tab-content" id="tab-profile">
                 <div class="profile-section">
                     <h2 class="section-title">Mi Perfil</h2>
-                    
                     <div class="profile-photo-section">
                         <div class="profile-photo-wrapper">
                             <div class="profile-photo" id="myProfilePhoto"></div>
                             <button class="btn-change-photo" onclick="app.changeProfilePhoto()">📷</button>
                         </div>
                     </div>
-                    
                     <div class="info-card">
                         <div class="info-label">Tu código único</div>
                         <div class="code-display">
@@ -1066,7 +994,6 @@
                         </div>
                         <button class="btn-copy" onclick="app.copyUserId()">📋 Copiar Código</button>
                     </div>
-                    
                     <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6; text-align: center;">
                         Comparte tu código para que puedan agregarte
                     </p>
@@ -1094,7 +1021,9 @@
                     </div>
                 </div>
                 
-                <div class="messages-container" id="messagesContainer"></div>
+                <div class="messages-wrapper">
+                    <div class="messages-container" id="messagesContainer"></div>
+                </div>
                 
                 <div class="chat-input-area">
                     <div class="image-preview-container" id="imagePreviewContainer">
@@ -1107,7 +1036,7 @@
                     </div>
                     
                     <div class="chat-input-wrapper">
-                        <button class="btn-input-action" onclick="app.attachImage()" title="Enviar imagen">📷</button>
+                        <button class="btn-input-action" onclick="app.attachImage()">📷</button>
                         <textarea class="chat-input" id="messageInput" placeholder="Escribe un mensaje" rows="1"></textarea>
                         <button class="btn-send" onclick="app.sendMessage()">➤</button>
                     </div>
@@ -1122,7 +1051,6 @@
                 <h2 class="modal-title">Ajustes</h2>
                 <button class="btn-close" onclick="app.closeSettings()">✕</button>
             </div>
-            
             <div class="settings-group">
                 <h3>Notificaciones</h3>
                 <div class="setting-item">
@@ -1130,7 +1058,6 @@
                     <div class="toggle-switch" id="toggleNotifications" onclick="app.toggleNotifications()"></div>
                 </div>
             </div>
-            
             <div class="settings-group">
                 <h3>Privacidad</h3>
                 <div class="setting-item">
@@ -1183,19 +1110,11 @@
                 this.userId = null;
                 this.contacts = [];
                 this.activeContact = null;
-                this.activeTab = 'chats';
                 this.isMobile = window.innerWidth < 768;
-                this.settings = {
-                    notifications: true,
-                    onlineStatus: true,
-                    readReceipts: true
-                };
+                this.settings = { notifications: true, onlineStatus: true, readReceipts: true };
                 this.onlineUsers = new Set();
-                this.typingUsers = new Set();
                 this.pendingImage = null;
-                
                 this.init();
-                
                 window.addEventListener('resize', () => {
                     const prev = this.isMobile;
                     this.isMobile = window.innerWidth < 768;
@@ -1210,29 +1129,23 @@
                 this.requestNotificationPermissionOnce();
                 this.renderContacts();
                 this.setupEventListeners();
-                
                 if (useFirebase) {
                     this.setupFirebaseListeners();
                     this.updateOnlineStatus(true);
+                    setInterval(() => {
+                        if (this.settings.onlineStatus) this.updateOnlineStatus(true);
+                    }, 30000);
                 }
-
-                setInterval(() => {
-                    if (useFirebase && this.settings.onlineStatus) {
-                        this.updateOnlineStatus(true);
-                    }
-                }, 30000);
             }
 
             generateUserId() {
                 return 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join('');
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
             }
 
             async loadOrCreateIdentity() {
                 const KEY = 'chatapp_main_identity';
                 const saved = this.loadFromStorage(KEY);
-
                 if (!saved) {
                     this.userId = this.generateUserId();
                     this.saveToStorage(KEY, { userId: this.userId, profilePhoto: null });
@@ -1245,7 +1158,6 @@
                         document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
                     }
                 }
-
                 document.getElementById('myUserId').textContent = this.userId;
             }
 
@@ -1253,15 +1165,9 @@
                 const saved = this.loadFromStorage(`settings_${this.userId}`);
                 if (saved) {
                     this.settings = saved;
-                    if (this.settings.notifications) {
-                        document.getElementById('toggleNotifications').classList.add('active');
-                    }
-                    if (this.settings.onlineStatus) {
-                        document.getElementById('toggleOnlineStatus').classList.add('active');
-                    }
-                    if (this.settings.readReceipts) {
-                        document.getElementById('toggleReadReceipts').classList.add('active');
-                    }
+                    if (this.settings.notifications) document.getElementById('toggleNotifications').classList.add('active');
+                    if (this.settings.onlineStatus) document.getElementById('toggleOnlineStatus').classList.add('active');
+                    if (this.settings.readReceipts) document.getElementById('toggleReadReceipts').classList.add('active');
                 }
             }
 
@@ -1288,7 +1194,6 @@
 
             requestNotificationPermissionOnce() {
                 const KEY = 'notification_permission_requested';
-                
                 if (!localStorage.getItem(KEY)) {
                     if ('Notification' in window && Notification.permission === 'default') {
                         Notification.requestPermission();
@@ -1314,25 +1219,12 @@
                     const online = snap.val() || {};
                     this.onlineUsers = new Set(Object.keys(online));
                     this.renderContacts();
-                    if (this.activeContact) {
-                        this.updateChatStatus();
-                    }
-                });
-
-                database.ref('typing').on('value', snap => {
-                    const typing = snap.val() || {};
-                    this.typingUsers = new Set(Object.keys(typing).filter(key => typing[key]));
-                    if (this.activeContact && typing[this.activeContact.id]) {
-                        document.getElementById('chatStatus').textContent = 'Escribiendo...';
-                    } else if (this.activeContact) {
-                        this.updateChatStatus();
-                    }
+                    if (this.activeContact) this.updateChatStatus();
                 });
             }
 
             updateOnlineStatus(isOnline) {
                 if (!useFirebase) return;
-                
                 if (isOnline) {
                     database.ref(`online/${this.userId}`).set(Date.now());
                     database.ref(`online/${this.userId}`).onDisconnect().remove();
@@ -1341,69 +1233,30 @@
                 }
             }
 
-            setTypingStatus(isTyping) {
-                if (!useFirebase || !this.activeContact) return;
-                
-                if (isTyping) {
-                    database.ref(`typing/${this.userId}`).set(this.activeContact.id);
-                } else {
-                    database.ref(`typing/${this.userId}`).remove();
-                }
-            }
-
             updateChatStatus() {
                 if (!this.activeContact) return;
-                
                 const statusEl = document.getElementById('chatStatus');
                 const indicatorEl = document.getElementById('chatOnlineIndicator');
-                
                 if (this.onlineUsers.has(this.activeContact.id)) {
                     statusEl.textContent = 'En línea';
                     indicatorEl.classList.remove('hidden');
                 } else {
-                    const lastSeen = this.activeContact.lastSeen;
-                    if (lastSeen) {
-                        const date = new Date(lastSeen);
-                        const now = new Date();
-                        const diff = now - date;
-                        
-                        if (diff < 60000) {
-                            statusEl.textContent = 'Hace un momento';
-                        } else if (diff < 3600000) {
-                            statusEl.textContent = `Hace ${Math.floor(diff / 60000)} min`;
-                        } else if (date.toDateString() === now.toDateString()) {
-                            statusEl.textContent = `Hoy a las ${date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`;
-                        } else {
-                            statusEl.textContent = `${date.toLocaleDateString('es', { day: '2-digit', month: '2-digit' })}`;
-                        }
-                    } else {
-                        statusEl.textContent = '🔒 Cifrado end-to-end';
-                    }
+                    statusEl.textContent = '🔒 Cifrado end-to-end';
                     indicatorEl.classList.add('hidden');
                 }
             }
 
             handleIncomingMessage(msg) {
                 const contact = this.contacts.find(c => c.id === msg.from);
-                
                 if (!contact || contact.blocked) return;
-
                 if (!contact.messages.find(m => m.id === msg.id)) {
                     contact.messages.push(msg);
-                    contact.lastSeen = Date.now();
-
                     if (this.activeContact?.id !== contact.id) {
                         contact.unreadCount = (contact.unreadCount || 0) + 1;
                         this.showSystemNotification(contact.name, msg.text || '📷 Imagen');
-                    } else {
-                        if (this.settings.readReceipts && useFirebase) {
-                            database.ref(`read/${msg.from}/${msg.id}`).set(true);
-                        }
                     }
-
                     this.saveContacts();
                     this.renderContacts();
-                    
                     if (this.activeContact?.id === contact.id) {
                         this.renderMessages();
                     }
@@ -1413,55 +1266,38 @@
             addContact() {
                 const id = document.getElementById('contactIdInput').value.trim();
                 const name = document.getElementById('contactNameInput').value.trim();
-
                 if (!id || !name) {
                     this.showNotification('Completa ambos campos');
                     return;
                 }
-
                 if (id === this.userId) {
                     this.showNotification('No puedes agregarte a ti mismo');
                     return;
                 }
-
                 if (this.contacts.find(c => c.id === id)) {
                     this.showNotification('Este contacto ya existe');
                     return;
                 }
-
                 this.contacts.push({
-                    id,
-                    name,
-                    messages: [],
-                    unreadCount: 0,
-                    blocked: false,
-                    muted: false,
-                    profilePhoto: null,
-                    lastSeen: null
+                    id, name, messages: [], unreadCount: 0, blocked: false, muted: false, profilePhoto: null, lastSeen: null
                 });
-
                 this.saveContacts();
                 this.renderContacts();
                 this.switchTabProgrammatically('chats');
-                
                 document.getElementById('contactIdInput').value = '';
                 document.getElementById('contactNameInput').value = '';
-                
                 this.showNotification('Contacto agregado');
             }
 
             renderContacts() {
                 const container = document.getElementById('contactsList');
-                
                 if (this.contacts.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>No tienes contactos</p></div>';
                     return;
                 }
-
                 container.innerHTML = this.contacts.map(contact => {
                     const isOnline = this.onlineUsers.has(contact.id);
                     const hasUnread = contact.unreadCount > 0;
-                    
                     return `
                         <div class="contact-item ${this.activeContact?.id === contact.id ? 'active' : ''}" 
                              onclick="app.selectContact('${contact.id}')">
@@ -1477,7 +1313,7 @@
                                     ${hasUnread ? `<span class="unread-badge">${contact.unreadCount}</span>` : ''}
                                 </div>
                                 <div class="contact-message ${hasUnread ? 'unread' : ''}">
-                                    ${contact.blocked ? '🚫 Bloqueado' : contact.muted ? '🔕 Silenciado' : this.getLastMessagePreview(contact)}
+                                    ${this.getLastMessagePreview(contact)}
                                 </div>
                             </div>
                         </div>
@@ -1486,49 +1322,35 @@
             }
 
             getLastMessagePreview(contact) {
-                if (!contact.messages || contact.messages.length === 0) {
-                    return 'Sin mensajes';
-                }
-                
+                if (!contact.messages || contact.messages.length === 0) return 'Sin mensajes';
                 const lastMsg = contact.messages[contact.messages.length - 1];
                 const prefix = lastMsg.from === this.userId ? 'Tú: ' : '';
-                
                 if (lastMsg.image) return prefix + '📷 Imagen';
-                
                 return prefix + (lastMsg.text?.substring(0, 30) || '') + (lastMsg.text?.length > 30 ? '...' : '');
             }
 
             selectContact(id) {
                 this.activeContact = this.contacts.find(c => c.id === id);
                 if (!this.activeContact) return;
-
                 this.activeContact.unreadCount = 0;
                 this.saveContacts();
-
-                // ✅ SOLO EN MÓVIL: ocultar sidebar
                 if (this.isMobile) {
                     document.getElementById('sidebar').classList.add('hidden-mobile');
                     document.getElementById('chatPanel').classList.add('active-mobile');
                 }
-
                 document.getElementById('emptyChatState').classList.add('hidden');
                 document.getElementById('activeChatArea').classList.remove('hidden');
-                
                 const avatar = document.getElementById('chatAvatar');
                 if (this.activeContact.profilePhoto) {
                     avatar.innerHTML = `<img src="${this.activeContact.profilePhoto}" alt="${this.activeContact.name}">`;
                 } else {
                     avatar.textContent = this.activeContact.name.charAt(0).toUpperCase();
                 }
-                
                 document.getElementById('chatContactName').textContent = this.activeContact.name;
                 this.updateChatStatus();
                 this.renderMessages();
                 this.renderContacts();
-
-                setTimeout(() => {
-                    document.getElementById('messageInput').focus();
-                }, 100);
+                setTimeout(() => document.getElementById('messageInput').focus(), 100);
             }
 
             backToContacts() {
@@ -1536,7 +1358,6 @@
                     document.getElementById('sidebar').classList.remove('hidden-mobile');
                     document.getElementById('chatPanel').classList.remove('active-mobile');
                 }
-                this.setTypingStatus(false);
             }
 
             updateLayout() {
@@ -1549,9 +1370,7 @@
             async sendMessage() {
                 const input = document.getElementById('messageInput');
                 const text = input.value.trim();
-                
                 if (!text || !this.activeContact) return;
-
                 const msg = {
                     id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                     from: this.userId,
@@ -1560,16 +1379,12 @@
                     timestamp: new Date().toISOString(),
                     read: false
                 };
-
                 this.activeContact.messages.push(msg);
                 this.saveContacts();
                 this.renderMessages();
                 this.renderContacts();
-                
                 input.value = '';
                 input.style.height = 'auto';
-                this.setTypingStatus(false);
-
                 if (useFirebase) {
                     database.ref(`messages/${msg.to}`).push(msg);
                 }
@@ -1577,31 +1392,22 @@
 
             renderMessages() {
                 if (!this.activeContact) return;
-
                 const container = document.getElementById('messagesContainer');
-
                 if (this.activeContact.messages.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p style="font-size: 0.875rem;">Los mensajes están cifrados end-to-end</p></div>';
                     return;
                 }
-
                 container.innerHTML = this.activeContact.messages.map(msg => {
                     const isSent = msg.from === this.userId;
                     const time = new Date(msg.timestamp).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-
                     let content = '';
-                    
                     if (msg.image) {
                         content = `<img src="${msg.image}" class="message-image" onclick="app.viewImage('${msg.image}')" alt="Imagen">`;
-                        if (msg.viewOnce) {
-                            content += '<span class="view-once-badge">VER UNA VEZ</span>';
-                        }
+                        if (msg.viewOnce) content += '<span class="view-once-badge">VER UNA VEZ</span>';
                     } else {
                         content = `<div class="message-text">${this.escapeHtml(msg.text)}</div>`;
                     }
-
                     const status = isSent ? (msg.read ? '✓✓' : '✓') : '';
-
                     return `
                         <div class="message ${isSent ? 'sent' : 'received'}">
                             <div class="message-bubble">
@@ -1614,8 +1420,8 @@
                         </div>
                     `;
                 }).join('');
-
-                container.scrollTop = container.scrollHeight;
+                const wrapper = document.querySelector('.messages-wrapper');
+                setTimeout(() => wrapper.scrollTop = wrapper.scrollHeight, 0);
             }
 
             attachImage() {
@@ -1625,14 +1431,12 @@
             handleImageSelect(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     this.pendingImage = e.target.result;
                     document.getElementById('imagePreview').src = this.pendingImage;
                     document.getElementById('imagePreviewContainer').classList.add('active');
                 };
-                
                 reader.readAsDataURL(file);
                 event.target.value = '';
             }
@@ -1652,7 +1456,6 @@
 
             sendImageMessage(viewOnce) {
                 if (!this.pendingImage || !this.activeContact) return;
-
                 const msg = {
                     id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                     from: this.userId,
@@ -1662,16 +1465,13 @@
                     read: false,
                     viewOnce: viewOnce
                 };
-
                 this.activeContact.messages.push(msg);
                 this.saveContacts();
                 this.renderMessages();
                 this.renderContacts();
-
                 if (useFirebase) {
                     database.ref(`messages/${msg.to}`).push(msg);
                 }
-
                 this.cancelImagePreview();
             }
 
@@ -1691,21 +1491,17 @@
             handleProfilePhotoSelect(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const photoData = e.target.result;
                     document.getElementById('myProfilePhoto').innerHTML = `<img src="${photoData}" alt="Perfil">`;
-                    
                     const identity = this.loadFromStorage('chatapp_main_identity');
                     identity.profilePhoto = photoData;
                     this.saveToStorage('chatapp_main_identity', identity);
-                    
                     if (useFirebase) {
                         database.ref(`profiles/${this.userId}`).set({ photo: photoData });
                     }
                 };
-                
                 reader.readAsDataURL(file);
                 event.target.value = '';
             }
@@ -1728,7 +1524,6 @@
                 this.settings.onlineStatus = !this.settings.onlineStatus;
                 document.getElementById('toggleOnlineStatus').classList.toggle('active');
                 this.saveSettings();
-                
                 if (useFirebase) {
                     this.updateOnlineStatus(this.settings.onlineStatus);
                 }
@@ -1768,7 +1563,6 @@
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 event.target.classList.add('active');
                 document.getElementById(`tab-${tab}`).classList.add('active');
-                this.activeTab = tab;
             }
 
             switchTabProgrammatically(tab) {
@@ -1782,27 +1576,15 @@
 
             setupEventListeners() {
                 const input = document.getElementById('messageInput');
-                
                 input.addEventListener('keydown', e => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         this.sendMessage();
                     }
                 });
-
                 input.addEventListener('input', e => {
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                    
-                    if (e.target.value.trim()) {
-                        this.setTypingStatus(true);
-                    } else {
-                        this.setTypingStatus(false);
-                    }
-                });
-
-                input.addEventListener('blur', () => {
-                    setTimeout(() => this.setTypingStatus(false), 1000);
                 });
             }
         }
