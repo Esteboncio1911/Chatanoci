@@ -811,472 +811,374 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCHlsKq3TDIfQHdZl2ALWJ_ctf0D7n_7jE",
-            authDomain: "chatanoci.firebaseapp.com",
-            databaseURL: "https://chatanoci-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "chatanoci",
-            storageBucket: "chatanoci.firebasestorage.app",
-            messagingSenderId: "832507950926",
-            appId: "1:832507950926:web:5c9926e3914a7c54f2101f"
+<script>
+/* =========================
+   FIREBASE CONFIG
+========================= */
+const firebaseConfig = {
+    apiKey: "AIzaSyCHlsKq3TDIfQHdZl2ALWJ_ctf0D7n_7jE",
+    authDomain: "chatanoci.firebaseapp.com",
+    databaseURL: "https://chatanoci-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "chatanoci",
+    storageBucket: "chatanoci.firebasestorage.app",
+    messagingSenderId: "832507950926",
+    appId: "1:832507950926:web:5c9926e3914a7c54f2101f"
+};
+
+let database = null;
+let useFirebase = false;
+
+try {
+    firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
+    useFirebase = true;
+    document.getElementById('connectionStatus').style.color = '#00ff88';
+} catch (e) {
+    document.getElementById('connectionStatus').style.color = '#ff4757';
+}
+
+/* =========================
+   CHAT APP
+========================= */
+class ChatApp {
+    constructor() {
+        this.userId = null;
+        this.contacts = [];
+        this.activeContact = null;
+        this.activeTab = 'chats';
+        this.isMobile = window.innerWidth < 768;
+
+        this.init();
+
+        window.addEventListener('resize', () => {
+            const prev = this.isMobile;
+            this.isMobile = window.innerWidth < 768;
+            if (prev !== this.isMobile) this.updateLayout();
+        });
+    }
+
+    /* =========================
+       INIT
+    ========================= */
+    async init() {
+        await this.loadOrCreateIdentity();
+        this.loadContacts();
+        this.initNotificationsOnce(); // ✅ CORREGIDO
+        this.renderContacts();
+        this.setupEventListeners();
+
+        if (useFirebase) this.setupFirebaseListeners();
+    }
+
+    /* =========================
+       🔔 NOTIFICATIONS (FIX)
+    ========================= */
+    initNotificationsOnce() {
+        if (!('Notification' in window)) return;
+
+        const key = 'notification_permission_requested';
+
+        if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, 'true');
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+    }
+
+    showSystemNotification(title, body) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body });
+        }
+    }
+
+    /* =========================
+       IDENTITY
+    ========================= */
+    generateUserId() {
+        return 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+    }
+
+    async loadOrCreateIdentity() {
+        const KEY = 'chatapp_main_identity';
+        const saved = this.loadFromStorage(KEY);
+
+        if (!saved) {
+            this.userId = this.generateUserId();
+            this.saveToStorage(KEY, { userId: this.userId });
+        } else {
+            this.userId = saved.userId;
+        }
+
+        document.getElementById('myUserId').textContent = this.userId;
+    }
+
+    /* =========================
+       STORAGE
+    ========================= */
+    saveToStorage(k, d) { localStorage.setItem(k, JSON.stringify(d)); }
+    loadFromStorage(k) { return JSON.parse(localStorage.getItem(k)); }
+
+    /* =========================
+       CONTACTS
+    ========================= */
+    loadContacts() {
+        this.contacts = this.loadFromStorage(`contacts_${this.userId}`) || [];
+    }
+
+    saveContacts() {
+        this.saveToStorage(`contacts_${this.userId}`, this.contacts);
+    }
+
+    addContact() {
+        const id = contactIdInput.value.trim();
+        const name = contactNameInput.value.trim();
+
+        if (!id || !name) return this.showNotification('Completa ambos campos');
+        if (id === this.userId) return this.showNotification('No puedes agregarte');
+
+        if (this.contacts.find(c => c.id === id)) {
+            return this.showNotification('Este contacto ya existe');
+        }
+
+        this.contacts.push({
+            id,
+            name,
+            messages: [],
+            unreadCount: 0,
+            blocked: false
+        });
+
+        this.saveContacts();
+        this.renderContacts();
+        this.switchTabProgrammatically('chats');
+        contactIdInput.value = contactNameInput.value = '';
+    }
+
+    editContact(contactId) {
+        const c = this.contacts.find(c => c.id === contactId);
+        if (!c) return;
+
+        const newName = prompt('Nuevo nombre:', c.name);
+        if (newName?.trim()) {
+            c.name = newName.trim();
+            this.saveContacts();
+            this.renderContacts();
+            if (this.activeContact?.id === c.id) {
+                chatContactName.textContent = c.name;
+                chatAvatar.textContent = c.name[0];
+            }
+        }
+    }
+
+    deleteContact(contactId) {
+        const c = this.contacts.find(c => c.id === contactId);
+        if (!c) return;
+
+        if (!confirm(`¿Eliminar a ${c.name}?`)) return;
+
+        this.contacts = this.contacts.filter(x => x.id !== contactId);
+        this.saveContacts();
+        this.renderContacts();
+
+        if (this.activeContact?.id === contactId) {
+            this.activeContact = null;
+            emptyChatState.style.display = 'flex';
+            activeChatArea.style.display = 'none';
+        }
+    }
+
+    toggleBlockContact(contactId) {
+        const c = this.contacts.find(c => c.id === contactId);
+        if (!c) return;
+
+        c.blocked = !c.blocked;
+        this.saveContacts();
+        this.renderContacts();
+    }
+
+    /* =========================
+       FIREBASE
+    ========================= */
+    setupFirebaseListeners() {
+        database.ref(`messages/${this.userId}`).on('child_added', snap => {
+            const msg = snap.val();
+            snap.ref.remove();
+            this.handleIncomingMessage(msg);
+        });
+    }
+
+    handleIncomingMessage(msg) {
+        const c = this.contacts.find(c => c.id === msg.from);
+        if (!c || c.blocked) return;
+
+        if (!c.messages.find(m => m.id === msg.id)) {
+            c.messages.push(msg);
+
+            if (this.activeContact?.id !== c.id) {
+                c.unreadCount++;
+                this.showSystemNotification(c.name, msg.text);
+            }
+
+            this.saveContacts();
+            this.renderContacts();
+            if (this.activeContact?.id === c.id) this.renderMessages();
+        }
+    }
+
+    /* =========================
+       UI / CHAT
+    ========================= */
+    sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text || !this.activeContact) return;
+
+        const msg = {
+            id: Date.now() + Math.random().toString(36),
+            from: this.userId,
+            to: this.activeContact.id,
+            text,
+            timestamp: new Date().toISOString()
         };
 
-        let database = null;
-        let useFirebase = false;
+        this.activeContact.messages.push(msg);
+        this.saveContacts();
+        this.renderMessages();
+        this.renderContacts();
+        messageInput.value = '';
 
-        try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            useFirebase = true;
-            console.log('✅ Firebase conectado');
-            document.getElementById('connectionStatus').style.color = '#00ff88';
-        } catch (error) {
-            console.error('Error al inicializar Firebase:', error);
-            document.getElementById('connectionStatus').style.color = '#ff4757';
+        if (useFirebase) {
+            database.ref(`messages/${msg.to}`).push(msg);
+        }
+    }
+
+    renderContacts() {
+        const c = contactsList;
+        if (!this.contacts.length) {
+            c.innerHTML = '<div class="empty-contacts">No tienes contactos</div>';
+            return;
         }
 
-        class ChatApp {
-            constructor() {
-                this.userId = null;
-                this.contacts = [];
-                this.activeContact = null;
-                this.activeTab = 'chats';
-                this.isMobile = window.innerWidth < 768;
-                
-                this.init();
-                
-                window.addEventListener('resize', () => {
-                    const wasMobile = this.isMobile;
-                    this.isMobile = window.innerWidth < 768;
-                    
-                    if (wasMobile !== this.isMobile) {
-                        this.updateLayout();
-                    }
-                });
-            }
-            
-            async init() {
-                await this.loadOrCreateIdentity();
-                this.loadContacts();
-                this.renderContacts();
-                this.setupEventListeners();
-                
-                if (useFirebase) {
-                    this.setupFirebaseListeners();
-                }
-            }
-            
-            generateUserId() {
-                return 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join('');
-            }
-            
-            switchTab(tabName) {
-                document.querySelectorAll('.tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                
-                event.target.classList.add('active');
-                document.getElementById(`tab-${tabName}`).classList.add('active');
-                
-                this.activeTab = tabName;
-            }
-            
-            async loadOrCreateIdentity() {
-                const GLOBAL_IDENTITY_KEY = 'chatapp_main_identity';
-                let savedIdentity = this.loadFromStorage(GLOBAL_IDENTITY_KEY);
-                
-                if (!savedIdentity) {
-                    this.userId = this.generateUserId();
-                    savedIdentity = {
-                        userId: this.userId,
-                        createdAt: new Date().toISOString()
-                    };
-                    this.saveToStorage(GLOBAL_IDENTITY_KEY, savedIdentity);
-                } else {
-                    this.userId = savedIdentity.userId;
-                }
-                
-                document.getElementById('myUserId').textContent = this.userId;
-            }
-            
-            loadContacts() {
-                this.contacts = this.loadFromStorage(`contacts_${this.userId}`) || [];
-            }
-            
-            saveContacts() {
-                this.saveToStorage(`contacts_${this.userId}`, this.contacts);
-            }
-            
-            saveToStorage(key, data) {
-                localStorage.setItem(key, JSON.stringify(data));
-            }
-            
-            loadFromStorage(key) {
-                const data = localStorage.getItem(key);
-                return data ? JSON.parse(data) : null;
-            }
-            
-            setupFirebaseListeners() {
-                if (!database) return;
-                
-                const messagesRef = database.ref(`messages/${this.userId}`);
-                messagesRef.on('child_added', (snapshot) => {
-                    const message = snapshot.val();
-                    this.handleIncomingMessage(message);
-                    snapshot.ref.remove();
-                });
-            }
-            
-            handleIncomingMessage(message) {
-                const contact = this.contacts.find(c => c.id === message.from);
-                
-                if (contact) {
-                    const exists = contact.messages.find(m => m.id === message.id);
-                    if (!exists) {
-                        contact.messages.push(message);
-                        
-                        if (this.activeContact?.id !== contact.id) {
-                            contact.unreadCount = (contact.unreadCount || 0) + 1;
-                        }
-                        
-                        this.saveContacts();
-                        this.renderContacts();
-                        
-                        if (this.activeContact?.id === contact.id) {
-                            this.renderMessages();
-                        }
-                    }
-                }
-            }
-            
-            addContact() {
-                const contactId = document.getElementById('contactIdInput').value.trim();
-                const contactName = document.getElementById('contactNameInput').value.trim();
-                
-                if (!contactId || !contactName) {
-                    this.showNotification('Por favor completa ambos campos');
-                    return;
-                }
-                
-                if (contactId === this.userId) {
-                    this.showNotification('No puedes agregarte a ti mismo');
-                    return;
-                }
-                
-                const exists = this.contacts.find(c => c.id === contactId);
-                if (exists) {
-                    this.showNotification('Este contacto ya existe');
-                    return;
-                }
-                
-                const newContact = {
-                    id: contactId,
-                    name: contactName,
-                    messages: [],
-                    unreadCount: 0,
-                    addedAt: new Date().toISOString()
-                };
-                
-                this.contacts.push(newContact);
-                this.saveContacts();
-                this.renderContacts();
-                
-                document.getElementById('contactIdInput').value = '';
-                document.getElementById('contactNameInput').value = '';
-                
-                this.showNotification('Contacto agregado exitosamente');
-                this.switchTabProgrammatically('chats');
-            }
-            
-            switchTabProgrammatically(tabName) {
-                document.querySelectorAll('.tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                
-                const tabs = document.querySelectorAll('.tab');
-                if (tabName === 'chats') tabs[0].classList.add('active');
-                else if (tabName === 'add') tabs[1].classList.add('active');
-                else if (tabName === 'profile') tabs[2].classList.add('active');
-                
-                document.getElementById(`tab-${tabName}`).classList.add('active');
-                this.activeTab = tabName;
-            }
-            
-            getContactInitials(name) {
-                return name.charAt(0).toUpperCase();
-            }
-            
-            getLastMessagePreview(contact) {
-                if (!contact.messages || contact.messages.length === 0) {
-                    return 'Sin mensajes';
-                }
-                const lastMsg = contact.messages[contact.messages.length - 1];
-                const prefix = lastMsg.from === this.userId ? 'Tú: ' : '';
-                return prefix + lastMsg.text.substring(0, 30) + (lastMsg.text.length > 30 ? '...' : '');
-            }
-            
-            getLastMessageTime(contact) {
-                if (!contact.messages || contact.messages.length === 0) {
-                    return '';
-                }
-                const lastMsg = contact.messages[contact.messages.length - 1];
-                const date = new Date(lastMsg.timestamp);
-                const now = new Date();
-                
-                if (date.toDateString() === now.toDateString()) {
-                    return date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    return date.toLocaleDateString('es', { day: '2-digit', month: '2-digit' });
-                }
-            }
-            
-            renderContacts() {
-                const container = document.getElementById('contactsList');
-                
-                if (this.contacts.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-contacts">
-                            <p style="font-weight: 500; margin-bottom: 1rem;">No tienes contactos aún</p>
-                            <p>Ve a la pestaña "Añadir" para agregar tu primer contacto</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                container.innerHTML = this.contacts.map(contact => `
-                    <div class="contact-item ${this.activeContact?.id === contact.id ? 'active' : ''}" 
-                         onclick="app.selectContact('${contact.id}')">
-                        <div class="contact-avatar">${this.getContactInitials(contact.name)}</div>
-                        <div class="contact-info">
-                            <div class="contact-header">
-                                <div class="contact-name">${this.escapeHtml(contact.name)}</div>
-                                <div style="display: flex; align-items: center;">
-                                    <div class="contact-time">${this.getLastMessageTime(contact)}</div>
-                                    ${contact.unreadCount > 0 ? `<span class="unread-badge">${contact.unreadCount}</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="contact-message">${this.getLastMessagePreview(contact)}</div>
-                        </div>
-                        <div class="contact-actions">
-                            <button class="btn-icon" onclick="event.stopPropagation(); app.editContact('${contact.id}')" title="Editar nombre">✏️</button>
-                            <button class="btn-icon" onclick="event.stopPropagation(); app.deleteContact('${contact.id}')" title="Eliminar contacto">🗑️</button>
-                        </div>
+        c.innerHTML = this.contacts.map(ct => `
+            <div class="contact-item ${this.activeContact?.id === ct.id ? 'active' : ''}"
+                 onclick="app.selectContact('${ct.id}')">
+                <div class="contact-avatar">${ct.name[0]}</div>
+                <div class="contact-info">
+                    <div class="contact-name">${ct.name}</div>
+                    <div class="contact-message">
+                        ${ct.blocked ? '🚫 Bloqueado' : this.getLastMessagePreview(ct)}
                     </div>
-                `).join('');
-            }
-            
-            selectContact(contactId) {
-                this.activeContact = this.contacts.find(c => c.id === contactId);
-                if (!this.activeContact) return;
-                
-                this.activeContact.unreadCount = 0;
-                this.saveContacts();
-                
-                if (this.isMobile) {
-                    document.getElementById('sidebar').style.display = 'none';
-                    document.getElementById('chatPanel').classList.add('active');
-                }
-                
-                document.getElementById('emptyChatState').style.display = 'none';
-                document.getElementById('activeChatArea').style.display = 'flex';
-                document.getElementById('chatContactName').textContent = this.activeContact.name;
-                document.getElementById('chatAvatar').textContent = this.getContactInitials(this.activeContact.name);
-                
-                this.renderMessages();
-                this.renderContacts();
-                
-                setTimeout(() => {
-                    document.getElementById('messageInput').focus();
-                }, 100);
-            }
-            
-            backToContacts() {
-                if (this.isMobile) {
-                    document.getElementById('sidebar').style.display = 'flex';
-                    document.getElementById('chatPanel').classList.remove('active');
-                }
-            }
-            
-            updateLayout() {
-                if (!this.isMobile) {
-                    document.getElementById('sidebar').style.display = 'flex';
-                    document.getElementById('chatPanel').classList.remove('active');
-                }
-            }
-            
-            async sendMessage() {
-                const input = document.getElementById('messageInput');
-                const messageText = input.value.trim();
-                
-                if (!messageText || !this.activeContact) return;
-                
-                const message = {
-                    id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                    from: this.userId,
-                    to: this.activeContact.id,
-                    text: messageText,
-                    timestamp: new Date().toISOString()
-                };
-                
-                this.activeContact.messages.push(message);
-                this.saveContacts();
-                this.renderMessages();
-                this.renderContacts();
-                
-                input.value = '';
-                input.style.height = 'auto';
-                
-                if (useFirebase && database) {
-                    try {
-                        await database.ref(`messages/${message.to}`).push(message);
-                        console.log('✅ Mensaje enviado');
-                    } catch (error) {
-                        console.error('❌ Error al enviar:', error);
-                        this.showNotification('Error al enviar mensaje');
-                    }
-                }
-            }
-            
-            renderMessages() {
-                if (!this.activeContact) return;
-                
-                const container = document.getElementById('messagesContainer');
-                
-                if (this.activeContact.messages.length === 0) {
-                    container.innerHTML = `
-                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); text-align: center; padding: 1rem;">
-                            <div>
-                                <p style="font-size: 2rem; margin-bottom: 0.75rem;">🔒</p>
-                                <p style="font-size: 0.9375rem; line-height: 1.5;">Los mensajes están cifrados end-to-end.</p>
-                                <p style="font-size: 0.875rem; margin-top: 0.5rem; opacity: 0.8;">Nadie fuera de este chat puede leerlos.</p>
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                container.innerHTML = this.activeContact.messages.map(msg => {
-                    const time = new Date(msg.timestamp).toLocaleTimeString('es', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    const isSent = msg.from === this.userId;
-                    
-                    return `
-                        <div class="message ${isSent ? 'sent' : 'received'}">
-                            <div class="message-bubble">
-                                <div class="message-text">${this.escapeHtml(msg.text)}</div>
-                                <div class="message-time">${time}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                container.scrollTop = container.scrollHeight;
-            }
-            
-            escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-            
-            editContact(contactId) {
-                const contact = this.contacts.find(c => c.id === contactId);
-                if (!contact) return;
-                
-                const newName = prompt('Nuevo nombre para el contacto:', contact.name);
-                if (newName && newName.trim()) {
-                    contact.name = newName.trim();
-                    this.saveContacts();
-                    this.renderContacts();
-                    
-                    if (this.activeContact?.id === contactId) {
-                        document.getElementById('chatContactName').textContent = contact.name;
-                        document.getElementById('chatAvatar').textContent = this.getContactInitials(contact.name);
-                    }
-                    
-                    this.showNotification('Nombre actualizado');
-                }
-            }
-            
-            deleteContact(contactId) {
-                const contact = this.contacts.find(c => c.id === contactId);
-                if (!contact) return;
-                
-                if (confirm(`¿Eliminar a ${contact.name}? Se perderán todos los mensajes.`)) {
-                    this.contacts = this.contacts.filter(c => c.id !== contactId);
-                    this.saveContacts();
-                    this.renderContacts();
-                    
-                    if (this.activeContact?.id === contactId) {
-                        this.activeContact = null;
-                        this.backToContacts();
-                        document.getElementById('emptyChatState').style.display = 'flex';
-                        document.getElementById('activeChatArea').style.display = 'none';
-                    }
-                    
-                    this.showNotification('Contacto eliminado');
-                }
-            }
-            
-            setupEventListeners() {
-                const messageInput = document.getElementById('messageInput');
-                
-                messageInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        this.sendMessage();
-                    }
-                });
+                </div>
+                <div class="contact-actions">
+                    <button class="btn-icon" onclick="event.stopPropagation(); app.editContact('${ct.id}')">✏️</button>
+                    <button class="btn-icon" onclick="event.stopPropagation(); app.deleteContact('${ct.id}')">🗑️</button>
+                    <button class="btn-icon" onclick="event.stopPropagation(); app.toggleBlockContact('${ct.id}')">🚫</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
-                messageInput.addEventListener('input', (e) => {
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                });
-            }
-            
-            showNotification(message) {
-                const notification = document.createElement('div');
-                notification.className = 'notification';
-                notification.textContent = message;
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.style.animation = 'slideUp 0.3s ease reverse';
-                    setTimeout(() => notification.remove(), 300);
-                }, 2500);
-            }
+    getLastMessagePreview(c) {
+        if (!c.messages.length) return 'Sin mensajes';
+        const m = c.messages.at(-1);
+        return (m.from === this.userId ? 'Tú: ' : '') + m.text.slice(0, 30);
+    }
+
+    renderMessages() {
+        messagesContainer.innerHTML = this.activeContact.messages.map(m => `
+            <div class="message ${m.from === this.userId ? 'sent' : 'received'}">
+                <div class="message-bubble">
+                    <div class="message-text">${this.escapeHtml(m.text)}</div>
+                </div>
+            </div>
+        `).join('');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    selectContact(id) {
+        this.activeContact = this.contacts.find(c => c.id === id);
+        if (!this.activeContact) return;
+
+        this.activeContact.unreadCount = 0;
+        this.saveContacts();
+
+        emptyChatState.style.display = 'none';
+        activeChatArea.style.display = 'flex';
+        chatContactName.textContent = this.activeContact.name;
+        chatAvatar.textContent = this.activeContact.name[0];
+
+        if (this.isMobile) {
+            sidebar.style.display = 'none';
+            chatPanel.classList.add('active');
         }
 
-        function copyUserId() {
-            const userId = document.getElementById('myUserId').textContent;
-            navigator.clipboard.writeText(userId).then(() => {
-                app.showNotification('Código copiado al portapapeles');
-            }).catch(() => {
-                app.showNotification('Error al copiar');
-            });
-        }
+        this.renderMessages();
+        this.renderContacts();
+    }
 
-        function addContact() {
-            app.addContact();
+    backToContacts() {
+        if (this.isMobile) {
+            sidebar.style.display = 'flex';
+            chatPanel.classList.remove('active');
         }
+    }
 
-        function sendMessage() {
-            app.sendMessage();
+    updateLayout() {
+        if (!this.isMobile) {
+            sidebar.style.display = 'flex';
+            chatPanel.classList.remove('active');
         }
+    }
 
-        const app = new ChatApp();
-    </script>
+    escapeHtml(t) {
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+    }
+
+    showNotification(msg) {
+        const n = document.createElement('div');
+        n.className = 'notification';
+        n.textContent = msg;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 2500);
+    }
+
+    setupEventListeners() {
+        messageInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+    }
+
+    switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    switchTabProgrammatically(tab) {
+        document.querySelectorAll('.tab, .tab-content').forEach(e => e.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+}
+
+/* =========================
+   GLOBAL
+========================= */
+function addContact(){ app.addContact(); }
+function sendMessage(){ app.sendMessage(); }
+function copyUserId(){
+    navigator.clipboard.writeText(myUserId.textContent)
+        .then(()=>app.showNotification('Código copiado'));
+}
+
+const app = new ChatApp();
+</script>
 </body>
 </html>
