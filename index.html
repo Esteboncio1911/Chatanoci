@@ -843,7 +843,6 @@
             display: none !important;
         }
         
-        /* Loading spinner */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -1125,6 +1124,7 @@
         let database = null;
         let auth = null;
         let useFirebase = false;
+        let useAuth = false;
 
         class ChatApp {
             constructor() {
@@ -1150,9 +1150,16 @@
                     auth = firebase.auth();
                     database = firebase.database();
                     
-                    // ✅ Autenticación anónima
-                    await auth.signInAnonymously();
-                    this.firebaseUid = auth.currentUser.uid;
+                    // ✅ Intentar autenticación anónima
+                    try {
+                        await auth.signInAnonymously();
+                        this.firebaseUid = auth.currentUser.uid;
+                        useAuth = true;
+                        console.log('✅ Autenticación anónima habilitada');
+                    } catch (authError) {
+                        console.log('⚠️  Auth no configurada, usando modo sin auth');
+                        useAuth = false;
+                    }
                     
                     useFirebase = true;
                     document.getElementById('connectionStatus').style.color = '#00ff88';
@@ -1180,34 +1187,52 @@
             }
 
             async loadOrCreateIdentity() {
-                // Buscar si este firebaseUid ya tiene un userId
-                const snapshot = await database.ref(`userIds/${this.firebaseUid}`).once('value');
-                
-                if (snapshot.exists()) {
-                    this.userId = snapshot.val();
-                } else {
-                    // Generar nuevo userId
-                    this.userId = 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-                        .map(b => b.toString(16).padStart(2, '0')).join('');
+                if (useAuth) {
+                    // Modo con autenticación
+                    const snapshot = await database.ref(`userIds/${this.firebaseUid}`).once('value');
                     
-                    // Guardar mapeo firebaseUid -> userId
-                    await database.ref(`userIds/${this.firebaseUid}`).set(this.userId);
-                }
+                    if (snapshot.exists()) {
+                        this.userId = snapshot.val();
+                    } else {
+                        this.userId = 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                            .map(b => b.toString(16).padStart(2, '0')).join('');
+                        await database.ref(`userIds/${this.firebaseUid}`).set(this.userId);
+                    }
 
-                const KEY = `identity_${this.firebaseUid}`;
-                const saved = this.loadFromStorage(KEY);
-                
-                if (saved && saved.profilePhoto) {
-                    document.getElementById('myProfilePhoto').innerHTML = `<img src="${saved.profilePhoto}" alt="Perfil">`;
+                    const KEY = `identity_${this.firebaseUid}`;
+                    const saved = this.loadFromStorage(KEY);
+                    
+                    if (saved && saved.profilePhoto) {
+                        document.getElementById('myProfilePhoto').innerHTML = `<img src="${saved.profilePhoto}" alt="Perfil">`;
+                    } else {
+                        document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
+                    }
                 } else {
-                    document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
+                    // Modo sin autenticación (más simple)
+                    const KEY = 'chatapp_main_identity';
+                    const saved = this.loadFromStorage(KEY);
+
+                    if (!saved) {
+                        this.userId = 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                            .map(b => b.toString(16).padStart(2, '0')).join('');
+                        this.saveToStorage(KEY, { userId: this.userId, profilePhoto: null });
+                        document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
+                    } else {
+                        this.userId = saved.userId;
+                        if (saved.profilePhoto) {
+                            document.getElementById('myProfilePhoto').innerHTML = `<img src="${saved.profilePhoto}" alt="Perfil">`;
+                        } else {
+                            document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
+                        }
+                    }
                 }
                 
                 document.getElementById('myUserId').textContent = this.userId;
             }
 
             loadSettings() {
-                const saved = this.loadFromStorage(`settings_${this.firebaseUid}`);
+                const key = useAuth ? `settings_${this.firebaseUid}` : `settings_${this.userId}`;
+                const saved = this.loadFromStorage(key);
                 if (saved) {
                     this.settings = saved;
                     if (this.settings.notifications) document.getElementById('toggleNotifications').classList.add('active');
@@ -1217,7 +1242,8 @@
             }
 
             saveSettings() {
-                this.saveToStorage(`settings_${this.firebaseUid}`, this.settings);
+                const key = useAuth ? `settings_${this.firebaseUid}` : `settings_${this.userId}`;
+                this.saveToStorage(key, this.settings);
             }
 
             saveToStorage(k, d) {
@@ -1230,11 +1256,13 @@
             }
 
             loadContacts() {
-                this.contacts = this.loadFromStorage(`contacts_${this.firebaseUid}`) || [];
+                const key = useAuth ? `contacts_${this.firebaseUid}` : `contacts_${this.userId}`;
+                this.contacts = this.loadFromStorage(key) || [];
             }
 
             saveContacts() {
-                this.saveToStorage(`contacts_${this.firebaseUid}`, this.contacts);
+                const key = useAuth ? `contacts_${this.firebaseUid}` : `contacts_${this.userId}`;
+                this.saveToStorage(key, this.contacts);
             }
 
             requestNotificationPermissionOnce() {
@@ -1254,7 +1282,9 @@
             }
 
             setupFirebaseListeners() {
-                database.ref(`messages/${this.firebaseUid}`).on('child_added', snap => {
+                const myKey = useAuth ? this.firebaseUid : this.userId;
+                
+                database.ref(`messages/${myKey}`).on('child_added', snap => {
                     const msg = snap.val();
                     snap.ref.remove();
                     this.handleIncomingMessage(msg);
@@ -1270,11 +1300,13 @@
 
             updateOnlineStatus(isOnline) {
                 if (!useFirebase) return;
+                const myKey = useAuth ? this.firebaseUid : this.userId;
+                
                 if (isOnline) {
-                    database.ref(`online/${this.firebaseUid}`).set(Date.now());
-                    database.ref(`online/${this.firebaseUid}`).onDisconnect().remove();
+                    database.ref(`online/${myKey}`).set(Date.now());
+                    database.ref(`online/${myKey}`).onDisconnect().remove();
                 } else {
-                    database.ref(`online/${this.firebaseUid}`).remove();
+                    database.ref(`online/${myKey}`).remove();
                 }
             }
 
@@ -1283,8 +1315,9 @@
                 const statusEl = document.getElementById('chatStatus');
                 const indicatorEl = document.getElementById('chatOnlineIndicator');
                 
-                // Buscar el firebaseUid del contacto
-                const isOnline = this.onlineUsers.has(this.activeContact.firebaseUid);
+                // Buscar si el contacto está online (por userId o firebaseUid)
+                const contactKey = this.activeContact.firebaseUid || this.activeContact.id;
+                const isOnline = this.onlineUsers.has(contactKey);
                 
                 if (isOnline) {
                     statusEl.textContent = 'En línea';
@@ -1335,21 +1368,24 @@
                     return;
                 }
                 
-                // Buscar el firebaseUid correspondiente a este userId
+                // ✅ MODO SIMPLE: Añadir contacto directamente sin buscar
                 let contactFirebaseUid = null;
-                const snapshot = await database.ref('userIds').once('value');
-                const userIds = snapshot.val() || {};
                 
-                for (const [fbUid, uId] of Object.entries(userIds)) {
-                    if (uId === id) {
-                        contactFirebaseUid = fbUid;
-                        break;
+                if (useAuth) {
+                    // Intentar buscar el firebaseUid (opcional)
+                    try {
+                        const snapshot = await database.ref('userIds').once('value');
+                        const userIds = snapshot.val() || {};
+                        
+                        for (const [fbUid, uId] of Object.entries(userIds)) {
+                            if (uId === id) {
+                                contactFirebaseUid = fbUid;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.log('No se pudo buscar firebaseUid');
                     }
-                }
-                
-                if (!contactFirebaseUid) {
-                    this.showNotification('Usuario no encontrado');
-                    return;
                 }
                 
                 this.contacts.push({
@@ -1382,7 +1418,8 @@
                 }
                 
                 container.innerHTML = this.contacts.map(contact => {
-                    const isOnline = this.onlineUsers.has(contact.firebaseUid);
+                    const contactKey = contact.firebaseUid || contact.id;
+                    const isOnline = this.onlineUsers.has(contactKey);
                     const hasUnread = contact.unreadCount > 0;
                     
                     return `
@@ -1483,7 +1520,8 @@
                 input.style.height = 'auto';
                 
                 if (useFirebase) {
-                    await database.ref(`messages/${this.activeContact.firebaseUid}`).push(msg);
+                    const recipientKey = this.activeContact.firebaseUid || this.activeContact.id;
+                    await database.ref(`messages/${recipientKey}`).push(msg);
                 }
             }
 
@@ -1577,7 +1615,8 @@
                 this.renderContacts();
                 
                 if (useFirebase) {
-                    await database.ref(`messages/${this.activeContact.firebaseUid}`).push(msg);
+                    const recipientKey = this.activeContact.firebaseUid || this.activeContact.id;
+                    await database.ref(`messages/${recipientKey}`).push(msg);
                 }
                 
                 this.cancelImagePreview();
@@ -1605,12 +1644,12 @@
                     const photoData = e.target.result;
                     document.getElementById('myProfilePhoto').innerHTML = `<img src="${photoData}" alt="Perfil">`;
                     
-                    const KEY = `identity_${this.firebaseUid}`;
+                    const KEY = useAuth ? `identity_${this.firebaseUid}` : 'chatapp_main_identity';
                     const identity = this.loadFromStorage(KEY) || {};
                     identity.profilePhoto = photoData;
                     this.saveToStorage(KEY, identity);
                     
-                    if (useFirebase) {
+                    if (useFirebase && useAuth) {
                         database.ref(`profiles/${this.firebaseUid}`).set({ photo: photoData });
                     }
                 };
