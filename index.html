@@ -472,7 +472,6 @@
             left: 22px;
         }
         
-        /* ✅ CHAT PANEL - FONDO FIJO */
         .chat-panel {
             flex: 1;
             display: flex;
@@ -546,7 +545,6 @@
             opacity: 0.85;
         }
         
-        /* ✅ MENSAJES - WRAPPER CON SCROLL */
         .messages-wrapper {
             flex: 1;
             overflow-y: auto;
@@ -555,7 +553,6 @@
             -webkit-overflow-scrolling: touch;
         }
         
-        /* ✅ CONTENEDOR DE MENSAJES - SIN SCROLL */
         .messages-container {
             min-height: 100%;
             padding: 1rem;
@@ -846,6 +843,33 @@
             display: none !important;
         }
         
+        /* Loading spinner */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--bg-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         @keyframes fadeInMessage {
             from {
                 opacity: 0;
@@ -943,6 +967,10 @@
     </style>
 </head>
 <body>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
     <div class="app-container">
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -1080,6 +1108,7 @@
     <input type="file" id="profilePhotoInput" accept="image/*" class="hidden" onchange="app.handleProfilePhotoSelect(event)">
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
@@ -1094,27 +1123,20 @@
         };
 
         let database = null;
+        let auth = null;
         let useFirebase = false;
-
-        try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            useFirebase = true;
-            document.getElementById('connectionStatus').style.color = '#00ff88';
-        } catch (e) {
-            document.getElementById('connectionStatus').style.color = '#ff4757';
-        }
 
         class ChatApp {
             constructor() {
                 this.userId = null;
+                this.firebaseUid = null;
                 this.contacts = [];
                 this.activeContact = null;
                 this.isMobile = window.innerWidth < 768;
                 this.settings = { notifications: true, onlineStatus: true, readReceipts: true };
                 this.onlineUsers = new Set();
                 this.pendingImage = null;
-                this.init();
+                
                 window.addEventListener('resize', () => {
                     const prev = this.isMobile;
                     this.isMobile = window.innerWidth < 768;
@@ -1123,46 +1145,69 @@
             }
 
             async init() {
-                await this.loadOrCreateIdentity();
-                this.loadContacts();
-                this.loadSettings();
-                this.requestNotificationPermissionOnce();
-                this.renderContacts();
-                this.setupEventListeners();
-                if (useFirebase) {
+                try {
+                    firebase.initializeApp(firebaseConfig);
+                    auth = firebase.auth();
+                    database = firebase.database();
+                    
+                    // ✅ Autenticación anónima
+                    await auth.signInAnonymously();
+                    this.firebaseUid = auth.currentUser.uid;
+                    
+                    useFirebase = true;
+                    document.getElementById('connectionStatus').style.color = '#00ff88';
+                    
+                    await this.loadOrCreateIdentity();
+                    this.loadContacts();
+                    this.loadSettings();
+                    this.requestNotificationPermissionOnce();
+                    this.renderContacts();
+                    this.setupEventListeners();
                     this.setupFirebaseListeners();
                     this.updateOnlineStatus(true);
+                    
                     setInterval(() => {
                         if (this.settings.onlineStatus) this.updateOnlineStatus(true);
                     }, 30000);
+                    
+                } catch (e) {
+                    console.error('Firebase error:', e);
+                    document.getElementById('connectionStatus').style.color = '#ff4757';
+                    this.showNotification('Error de conexión: ' + e.message);
+                } finally {
+                    document.getElementById('loadingOverlay').style.display = 'none';
                 }
-            }
-
-            generateUserId() {
-                return 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-                    .map(b => b.toString(16).padStart(2, '0')).join('');
             }
 
             async loadOrCreateIdentity() {
-                const KEY = 'chatapp_main_identity';
-                const saved = this.loadFromStorage(KEY);
-                if (!saved) {
-                    this.userId = this.generateUserId();
-                    this.saveToStorage(KEY, { userId: this.userId, profilePhoto: null });
-                    document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
+                // Buscar si este firebaseUid ya tiene un userId
+                const snapshot = await database.ref(`userIds/${this.firebaseUid}`).once('value');
+                
+                if (snapshot.exists()) {
+                    this.userId = snapshot.val();
                 } else {
-                    this.userId = saved.userId;
-                    if (saved.profilePhoto) {
-                        document.getElementById('myProfilePhoto').innerHTML = `<img src="${saved.profilePhoto}" alt="Perfil">`;
-                    } else {
-                        document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
-                    }
+                    // Generar nuevo userId
+                    this.userId = 'user_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                        .map(b => b.toString(16).padStart(2, '0')).join('');
+                    
+                    // Guardar mapeo firebaseUid -> userId
+                    await database.ref(`userIds/${this.firebaseUid}`).set(this.userId);
                 }
+
+                const KEY = `identity_${this.firebaseUid}`;
+                const saved = this.loadFromStorage(KEY);
+                
+                if (saved && saved.profilePhoto) {
+                    document.getElementById('myProfilePhoto').innerHTML = `<img src="${saved.profilePhoto}" alt="Perfil">`;
+                } else {
+                    document.getElementById('myProfilePhoto').textContent = this.userId.charAt(5).toUpperCase();
+                }
+                
                 document.getElementById('myUserId').textContent = this.userId;
             }
 
             loadSettings() {
-                const saved = this.loadFromStorage(`settings_${this.userId}`);
+                const saved = this.loadFromStorage(`settings_${this.firebaseUid}`);
                 if (saved) {
                     this.settings = saved;
                     if (this.settings.notifications) document.getElementById('toggleNotifications').classList.add('active');
@@ -1172,7 +1217,7 @@
             }
 
             saveSettings() {
-                this.saveToStorage(`settings_${this.userId}`, this.settings);
+                this.saveToStorage(`settings_${this.firebaseUid}`, this.settings);
             }
 
             saveToStorage(k, d) {
@@ -1185,11 +1230,11 @@
             }
 
             loadContacts() {
-                this.contacts = this.loadFromStorage(`contacts_${this.userId}`) || [];
+                this.contacts = this.loadFromStorage(`contacts_${this.firebaseUid}`) || [];
             }
 
             saveContacts() {
-                this.saveToStorage(`contacts_${this.userId}`, this.contacts);
+                this.saveToStorage(`contacts_${this.firebaseUid}`, this.contacts);
             }
 
             requestNotificationPermissionOnce() {
@@ -1209,7 +1254,7 @@
             }
 
             setupFirebaseListeners() {
-                database.ref(`messages/${this.userId}`).on('child_added', snap => {
+                database.ref(`messages/${this.firebaseUid}`).on('child_added', snap => {
                     const msg = snap.val();
                     snap.ref.remove();
                     this.handleIncomingMessage(msg);
@@ -1226,10 +1271,10 @@
             updateOnlineStatus(isOnline) {
                 if (!useFirebase) return;
                 if (isOnline) {
-                    database.ref(`online/${this.userId}`).set(Date.now());
-                    database.ref(`online/${this.userId}`).onDisconnect().remove();
+                    database.ref(`online/${this.firebaseUid}`).set(Date.now());
+                    database.ref(`online/${this.firebaseUid}`).onDisconnect().remove();
                 } else {
-                    database.ref(`online/${this.userId}`).remove();
+                    database.ref(`online/${this.firebaseUid}`).remove();
                 }
             }
 
@@ -1237,7 +1282,11 @@
                 if (!this.activeContact) return;
                 const statusEl = document.getElementById('chatStatus');
                 const indicatorEl = document.getElementById('chatOnlineIndicator');
-                if (this.onlineUsers.has(this.activeContact.id)) {
+                
+                // Buscar el firebaseUid del contacto
+                const isOnline = this.onlineUsers.has(this.activeContact.firebaseUid);
+                
+                if (isOnline) {
                     statusEl.textContent = 'En línea';
                     indicatorEl.classList.remove('hidden');
                 } else {
@@ -1249,43 +1298,79 @@
             handleIncomingMessage(msg) {
                 const contact = this.contacts.find(c => c.id === msg.from);
                 if (!contact || contact.blocked) return;
+                
                 if (!contact.messages.find(m => m.id === msg.id)) {
                     contact.messages.push(msg);
+                    
                     if (this.activeContact?.id !== contact.id) {
                         contact.unreadCount = (contact.unreadCount || 0) + 1;
                         this.showSystemNotification(contact.name, msg.text || '📷 Imagen');
                     }
+                    
                     this.saveContacts();
                     this.renderContacts();
+                    
                     if (this.activeContact?.id === contact.id) {
                         this.renderMessages();
                     }
                 }
             }
 
-            addContact() {
+            async addContact() {
                 const id = document.getElementById('contactIdInput').value.trim();
                 const name = document.getElementById('contactNameInput').value.trim();
+                
                 if (!id || !name) {
                     this.showNotification('Completa ambos campos');
                     return;
                 }
+                
                 if (id === this.userId) {
                     this.showNotification('No puedes agregarte a ti mismo');
                     return;
                 }
+                
                 if (this.contacts.find(c => c.id === id)) {
                     this.showNotification('Este contacto ya existe');
                     return;
                 }
+                
+                // Buscar el firebaseUid correspondiente a este userId
+                let contactFirebaseUid = null;
+                const snapshot = await database.ref('userIds').once('value');
+                const userIds = snapshot.val() || {};
+                
+                for (const [fbUid, uId] of Object.entries(userIds)) {
+                    if (uId === id) {
+                        contactFirebaseUid = fbUid;
+                        break;
+                    }
+                }
+                
+                if (!contactFirebaseUid) {
+                    this.showNotification('Usuario no encontrado');
+                    return;
+                }
+                
                 this.contacts.push({
-                    id, name, messages: [], unreadCount: 0, blocked: false, muted: false, profilePhoto: null, lastSeen: null
+                    id,
+                    firebaseUid: contactFirebaseUid,
+                    name,
+                    messages: [],
+                    unreadCount: 0,
+                    blocked: false,
+                    muted: false,
+                    profilePhoto: null,
+                    lastSeen: null
                 });
+                
                 this.saveContacts();
                 this.renderContacts();
                 this.switchTabProgrammatically('chats');
+                
                 document.getElementById('contactIdInput').value = '';
                 document.getElementById('contactNameInput').value = '';
+                
                 this.showNotification('Contacto agregado');
             }
 
@@ -1295,9 +1380,11 @@
                     container.innerHTML = '<div class="empty-state"><p>No tienes contactos</p></div>';
                     return;
                 }
+                
                 container.innerHTML = this.contacts.map(contact => {
-                    const isOnline = this.onlineUsers.has(contact.id);
+                    const isOnline = this.onlineUsers.has(contact.firebaseUid);
                     const hasUnread = contact.unreadCount > 0;
+                    
                     return `
                         <div class="contact-item ${this.activeContact?.id === contact.id ? 'active' : ''}" 
                              onclick="app.selectContact('${contact.id}')">
@@ -1332,24 +1419,30 @@
             selectContact(id) {
                 this.activeContact = this.contacts.find(c => c.id === id);
                 if (!this.activeContact) return;
+                
                 this.activeContact.unreadCount = 0;
                 this.saveContacts();
+                
                 if (this.isMobile) {
                     document.getElementById('sidebar').classList.add('hidden-mobile');
                     document.getElementById('chatPanel').classList.add('active-mobile');
                 }
+                
                 document.getElementById('emptyChatState').classList.add('hidden');
                 document.getElementById('activeChatArea').classList.remove('hidden');
+                
                 const avatar = document.getElementById('chatAvatar');
                 if (this.activeContact.profilePhoto) {
                     avatar.innerHTML = `<img src="${this.activeContact.profilePhoto}" alt="${this.activeContact.name}">`;
                 } else {
                     avatar.textContent = this.activeContact.name.charAt(0).toUpperCase();
                 }
+                
                 document.getElementById('chatContactName').textContent = this.activeContact.name;
                 this.updateChatStatus();
                 this.renderMessages();
                 this.renderContacts();
+                
                 setTimeout(() => document.getElementById('messageInput').focus(), 100);
             }
 
@@ -1371,6 +1464,7 @@
                 const input = document.getElementById('messageInput');
                 const text = input.value.trim();
                 if (!text || !this.activeContact) return;
+                
                 const msg = {
                     id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                     from: this.userId,
@@ -1379,35 +1473,43 @@
                     timestamp: new Date().toISOString(),
                     read: false
                 };
+                
                 this.activeContact.messages.push(msg);
                 this.saveContacts();
                 this.renderMessages();
                 this.renderContacts();
+                
                 input.value = '';
                 input.style.height = 'auto';
+                
                 if (useFirebase) {
-                    database.ref(`messages/${msg.to}`).push(msg);
+                    await database.ref(`messages/${this.activeContact.firebaseUid}`).push(msg);
                 }
             }
 
             renderMessages() {
                 if (!this.activeContact) return;
                 const container = document.getElementById('messagesContainer');
+                
                 if (this.activeContact.messages.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p style="font-size: 0.875rem;">Los mensajes están cifrados end-to-end</p></div>';
                     return;
                 }
+                
                 container.innerHTML = this.activeContact.messages.map(msg => {
                     const isSent = msg.from === this.userId;
                     const time = new Date(msg.timestamp).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
                     let content = '';
+                    
                     if (msg.image) {
                         content = `<img src="${msg.image}" class="message-image" onclick="app.viewImage('${msg.image}')" alt="Imagen">`;
                         if (msg.viewOnce) content += '<span class="view-once-badge">VER UNA VEZ</span>';
                     } else {
                         content = `<div class="message-text">${this.escapeHtml(msg.text)}</div>`;
                     }
+                    
                     const status = isSent ? (msg.read ? '✓✓' : '✓') : '';
+                    
                     return `
                         <div class="message ${isSent ? 'sent' : 'received'}">
                             <div class="message-bubble">
@@ -1420,6 +1522,7 @@
                         </div>
                     `;
                 }).join('');
+                
                 const wrapper = document.querySelector('.messages-wrapper');
                 setTimeout(() => wrapper.scrollTop = wrapper.scrollHeight, 0);
             }
@@ -1431,6 +1534,7 @@
             handleImageSelect(event) {
                 const file = event.target.files[0];
                 if (!file) return;
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     this.pendingImage = e.target.result;
@@ -1454,8 +1558,9 @@
                 this.sendImageMessage(false);
             }
 
-            sendImageMessage(viewOnce) {
+            async sendImageMessage(viewOnce) {
                 if (!this.pendingImage || !this.activeContact) return;
+                
                 const msg = {
                     id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                     from: this.userId,
@@ -1465,13 +1570,16 @@
                     read: false,
                     viewOnce: viewOnce
                 };
+                
                 this.activeContact.messages.push(msg);
                 this.saveContacts();
                 this.renderMessages();
                 this.renderContacts();
+                
                 if (useFirebase) {
-                    database.ref(`messages/${msg.to}`).push(msg);
+                    await database.ref(`messages/${this.activeContact.firebaseUid}`).push(msg);
                 }
+                
                 this.cancelImagePreview();
             }
 
@@ -1491,15 +1599,19 @@
             handleProfilePhotoSelect(event) {
                 const file = event.target.files[0];
                 if (!file) return;
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const photoData = e.target.result;
                     document.getElementById('myProfilePhoto').innerHTML = `<img src="${photoData}" alt="Perfil">`;
-                    const identity = this.loadFromStorage('chatapp_main_identity');
+                    
+                    const KEY = `identity_${this.firebaseUid}`;
+                    const identity = this.loadFromStorage(KEY) || {};
                     identity.profilePhoto = photoData;
-                    this.saveToStorage('chatapp_main_identity', identity);
+                    this.saveToStorage(KEY, identity);
+                    
                     if (useFirebase) {
-                        database.ref(`profiles/${this.userId}`).set({ photo: photoData });
+                        database.ref(`profiles/${this.firebaseUid}`).set({ photo: photoData });
                     }
                 };
                 reader.readAsDataURL(file);
@@ -1590,6 +1702,7 @@
         }
 
         const app = new ChatApp();
+        app.init();
     </script>
 </body>
 </html>
