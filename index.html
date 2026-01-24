@@ -84,7 +84,24 @@
         .chat-info { flex: 1; }
         .chat-info h2 { font-size: 1rem; font-weight: 500; margin-bottom: 0.125rem; }
         .chat-status { font-size: 0.75rem; opacity: 0.85; }
-        .messages-wrapper { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; -webkit-overflow-scrolling: touch; }
+        
+        /* ✅ CORRECCIÓN: activeChatArea debe ser flex column */
+        #activeChatArea {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        /* ✅ CORRECCIÓN: messages-wrapper con flex: 1 y overflow */
+        .messages-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+            min-height: 0;
+        }
+        
         .messages-container { min-height: 100%; padding: 1rem; display: flex; flex-direction: column; justify-content: flex-end; }
         .message { max-width: 80%; margin-bottom: 0.5rem; display: flex; animation: fadeInMessage 0.25s ease; }
         .message.sent { justify-content: flex-end; }
@@ -97,7 +114,18 @@
         .message-time { font-size: 0.6875rem; color: var(--text-secondary); }
         .message-status { font-size: 0.875rem; color: var(--primary); margin-left: 0.25rem; }
         .view-once-badge { display: inline-block; background: var(--danger); color: white; padding: 0.125rem 0.5rem; border-radius: 10px; font-size: 0.625rem; margin-left: 0.5rem; }
-        .chat-input-area { background: var(--bg-white); border-top: 1px solid var(--border); flex-shrink: 0; padding: 0.75rem 1rem; padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); position: relative; z-index: 10; }
+        
+        /* ✅ CORRECCIÓN: chat-input-area con flex-shrink: 0 */
+        .chat-input-area {
+            background: var(--bg-white);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            padding: 0.75rem 1rem;
+            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+            position: relative;
+            z-index: 10;
+        }
+        
         .image-preview-container { display: none; padding: 0.75rem; background: var(--bg-light); border-radius: 8px; margin-bottom: 0.75rem; }
         .image-preview-container.active { display: block; }
         .image-preview { max-width: 150px; max-height: 150px; border-radius: 8px; margin-bottom: 0.75rem; }
@@ -274,9 +302,7 @@
             messagingSenderId: "832507950926",
             appId: "1:832507950926:web:5c9926e3914a7c54f2101f"
         };
-
         let database = null, auth = null, useFirebase = false, useAuth = false;
-
         class ChatApp {
             constructor() {
                 this.userId = null; this.firebaseUid = null; this.contacts = []; this.activeContact = null;
@@ -288,7 +314,6 @@
                     if (prev !== this.isMobile) this.updateLayout();
                 });
             }
-
             async init() {
                 try {
                     firebase.initializeApp(firebaseConfig);
@@ -297,9 +322,7 @@
                         await auth.signInAnonymously();
                         this.firebaseUid = auth.currentUser.uid;
                         useAuth = true;
-                    } catch (authError) {
-                        useAuth = false;
-                    }
+                    } catch (authError) { useAuth = false; }
                     useFirebase = true;
                     document.getElementById('connectionStatus').style.color = '#00ff88';
                     await this.loadOrCreateIdentity();
@@ -321,7 +344,6 @@
                     document.getElementById('loadingOverlay').style.display = 'none';
                 }
             }
-
             async loadOrCreateIdentity() {
                 if (useAuth) {
                     const snapshot = await database.ref(`userIds/${this.firebaseUid}`).once('value');
@@ -358,7 +380,6 @@
                 }
                 document.getElementById('myUserId').textContent = this.userId;
             }
-
             async publishUserIdToFirebase() {
                 if (!useFirebase) return;
                 try {
@@ -369,7 +390,6 @@
                     }
                 } catch (e) {}
             }
-
             async migrateContacts() {
                 if (!useAuth || this.contacts.length === 0) return;
                 let migrated = false;
@@ -389,7 +409,6 @@
                     this.renderContacts();
                 }
             }
-
             loadSettings() {
                 const key = useAuth ? `settings_${this.firebaseUid}` : `settings_${this.userId}`;
                 const saved = this.loadFromStorage(key);
@@ -400,37 +419,30 @@
                     if (this.settings.readReceipts) document.getElementById('toggleReadReceipts').classList.add('active');
                 }
             }
-
             saveSettings() {
                 const key = useAuth ? `settings_${this.firebaseUid}` : `settings_${this.userId}`;
                 this.saveToStorage(key, this.settings);
             }
-
             saveToStorage(k, d) { localStorage.setItem(k, JSON.stringify(d)); }
             loadFromStorage(k) { const data = localStorage.getItem(k); return data ? JSON.parse(data) : null; }
-
             loadContacts() {
                 const key = useAuth ? `contacts_${this.firebaseUid}` : `contacts_${this.userId}`;
                 this.contacts = this.loadFromStorage(key) || [];
             }
-
             saveContacts() {
                 const key = useAuth ? `contacts_${this.firebaseUid}` : `contacts_${this.userId}`;
                 this.saveToStorage(key, this.contacts);
             }
-
             requestNotificationPermission() {
                 if ('Notification' in window && Notification.permission === 'default' && this.settings.notifications) {
                     Notification.requestPermission();
                 }
             }
-
             showSystemNotification(title, body) {
                 if ('Notification' in window && Notification.permission === 'granted' && this.settings.notifications) {
                     new Notification(title, { body, icon: '/icon.png' });
                 }
             }
-
             setupFirebaseListeners() {
                 const myKey = useAuth ? this.firebaseUid : this.userId;
                 database.ref(`messages/${myKey}`).on('child_added', snap => {
@@ -445,7 +457,6 @@
                     if (this.activeContact) this.updateChatStatus();
                 });
             }
-
             updateOnlineStatus(isOnline) {
                 if (!useFirebase) return;
                 const myKey = useAuth ? this.firebaseUid : this.userId;
@@ -456,7 +467,6 @@
                     database.ref(`online/${myKey}`).remove();
                 }
             }
-
             updateChatStatus() {
                 if (!this.activeContact) return;
                 const statusEl = document.getElementById('chatStatus');
@@ -471,14 +481,11 @@
                     indicatorEl.classList.add('hidden');
                 }
             }
-
             handleIncomingMessage(msg) {
                 const contact = this.contacts.find(c => c.id === msg.from);
                 if (!contact || contact.blocked) return;
                 if (!contact.messages.find(m => m.id === msg.id)) {
                     contact.messages.push(msg);
-                    
-                    // ✅ MARCAR COMO LEÍDO SI ESTOY EN EL CHAT
                     if (this.activeContact?.id === contact.id && this.settings.readReceipts) {
                         this.markAsRead(msg.id, msg.from);
                     } else {
@@ -487,7 +494,6 @@
                             this.showSystemNotification(contact.name, msg.text || '📷 Imagen');
                         }
                     }
-                    
                     this.saveContacts();
                     this.renderContacts();
                     if (this.activeContact?.id === contact.id) {
@@ -495,12 +501,9 @@
                     }
                 }
             }
-
-            // ✅ MARCAR MENSAJE COMO LEÍDO
             async markAsRead(messageId, senderId) {
                 if (!useFirebase || !this.settings.readReceipts) return;
                 try {
-                    // Buscar el firebaseUid del remitente
                     const contact = this.contacts.find(c => c.id === senderId);
                     if (contact) {
                         const senderKey = contact.firebaseUid || senderId;
@@ -511,7 +514,6 @@
                     }
                 } catch (e) {}
             }
-
             async addContact() {
                 const id = document.getElementById('contactIdInput').value.trim();
                 const name = document.getElementById('contactNameInput').value.trim();
@@ -534,7 +536,6 @@
                 document.getElementById('contactNameInput').value = '';
                 this.showNotification('Contacto agregado');
             }
-
             renderContacts() {
                 const container = document.getElementById('contactsList');
                 if (this.contacts.length === 0) {
@@ -574,7 +575,6 @@
                     `;
                 }).join('');
             }
-
             openContactMenu(index) {
                 document.querySelectorAll('.contact-menu').forEach(m => m.classList.remove('active'));
                 document.getElementById(`contactMenu${index}`).classList.add('active');
@@ -588,14 +588,12 @@
                     document.addEventListener('click', closeMenus);
                 }, 100);
             }
-
             editContact(index) {
                 this.editingContact = index;
                 document.getElementById('editContactNameInput').value = this.contacts[index].name;
                 document.getElementById('editContactModal').classList.add('active');
                 document.querySelectorAll('.contact-menu').forEach(m => m.classList.remove('active'));
             }
-
             saveEditContact() {
                 if (this.editingContact === null) return;
                 const newName = document.getElementById('editContactNameInput').value.trim();
@@ -604,26 +602,22 @@
                 this.saveContacts(); this.renderContacts(); this.closeEditContact();
                 this.showNotification('Contacto actualizado');
             }
-
             closeEditContact() {
                 this.editingContact = null;
                 document.getElementById('editContactModal').classList.remove('active');
             }
-
             toggleMute(index) {
                 this.contacts[index].muted = !this.contacts[index].muted;
                 this.saveContacts(); this.renderContacts();
                 this.showNotification(this.contacts[index].muted ? 'Contacto silenciado' : 'Contacto activado');
                 document.querySelectorAll('.contact-menu').forEach(m => m.classList.remove('active'));
             }
-
             toggleBlock(index) {
                 this.contacts[index].blocked = !this.contacts[index].blocked;
                 this.saveContacts(); this.renderContacts();
                 this.showNotification(this.contacts[index].blocked ? 'Contacto bloqueado' : 'Contacto desbloqueado');
                 document.querySelectorAll('.contact-menu').forEach(m => m.classList.remove('active'));
             }
-
             deleteContact(index) {
                 if (!confirm(`¿Eliminar a ${this.contacts[index].name}?`)) return;
                 this.contacts.splice(index, 1);
@@ -631,7 +625,6 @@
                 this.showNotification('Contacto eliminado');
                 document.querySelectorAll('.contact-menu').forEach(m => m.classList.remove('active'));
             }
-
             getLastMessagePreview(contact) {
                 if (!contact.messages || contact.messages.length === 0) return 'Sin mensajes';
                 const lastMsg = contact.messages[contact.messages.length - 1];
@@ -639,13 +632,10 @@
                 if (lastMsg.image) return prefix + '📷 Imagen';
                 return prefix + (lastMsg.text?.substring(0, 30) || '') + (lastMsg.text?.length > 30 ? '...' : '');
             }
-
             selectContact(id) {
                 this.activeContact = this.contacts.find(c => c.id === id);
                 if (!this.activeContact) return;
                 this.activeContact.unreadCount = 0;
-                
-                // ✅ MARCAR TODOS LOS MENSAJES COMO LEÍDOS
                 if (this.settings.readReceipts) {
                     this.activeContact.messages.forEach(msg => {
                         if (msg.from !== this.userId && !msg.read) {
@@ -654,7 +644,6 @@
                         }
                     });
                 }
-                
                 this.saveContacts();
                 if (this.isMobile) {
                     document.getElementById('sidebar').classList.add('hidden-mobile');
@@ -670,14 +659,9 @@
                 }
                 document.getElementById('chatContactName').textContent = this.activeContact.name;
                 this.updateChatStatus(); this.renderMessages(); this.renderContacts();
-                
-                // ✅ ESCUCHAR CONFIRMACIONES DE LECTURA
                 this.listenForReadReceipts();
-                
                 setTimeout(() => document.getElementById('messageInput').focus(), 100);
             }
-
-            // ✅ ESCUCHAR CUANDO EL OTRO LEE MIS MENSAJES
             listenForReadReceipts() {
                 if (!useFirebase || !this.activeContact) return;
                 const myKey = useAuth ? this.firebaseUid : this.userId;
@@ -688,25 +672,22 @@
                         msg.read = true;
                         this.saveContacts();
                         this.renderMessages();
-                        snap.ref.remove(); // Limpiar
+                        snap.ref.remove();
                     }
                 });
             }
-
             backToContacts() {
                 if (this.isMobile) {
                     document.getElementById('sidebar').classList.remove('hidden-mobile');
                     document.getElementById('chatPanel').classList.remove('active-mobile');
                 }
             }
-
             updateLayout() {
                 if (!this.isMobile) {
                     document.getElementById('sidebar').classList.remove('hidden-mobile');
                     document.getElementById('chatPanel').classList.remove('active-mobile');
                 }
             }
-
             async sendMessage() {
                 const input = document.getElementById('messageInput');
                 const text = input.value.trim();
@@ -728,7 +709,6 @@
                     }
                 }
             }
-
             renderMessages() {
                 if (!this.activeContact) return;
                 const container = document.getElementById('messagesContainer');
@@ -762,7 +742,6 @@
                 const wrapper = document.querySelector('.messages-wrapper');
                 setTimeout(() => wrapper.scrollTop = wrapper.scrollHeight, 0);
             }
-
             attachImage() { document.getElementById('imageInput').click(); }
             handleImageSelect(event) {
                 const file = event.target.files[0];
@@ -892,7 +871,6 @@
                 });
             }
         }
-
         const app = new ChatApp();
         app.init();
     </script>
