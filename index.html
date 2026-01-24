@@ -22,6 +22,92 @@
         .btn-header { background: none; border: none; color: white; font-size: 1.25rem; cursor: pointer; padding: 0.5rem; border-radius: 50%; transition: background 0.2s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
         .btn-header:active { background: rgba(255, 255, 255, 0.1); }
         .connection-status { font-size: 1.5rem; }
+        
+        /* ✅ BANNER DE NOTIFICACIONES */
+        .notification-banner {
+            background: linear-gradient(135deg, #ff6b6b, #ff4757);
+            color: white;
+            padding: 1rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            animation: slideDown 0.3s ease;
+        }
+        .notification-banner.active { display: flex; }
+        .notification-banner-text {
+            flex: 1;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .btn-enable-notifications {
+            background: white;
+            color: #ff4757;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-left: 0.5rem;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* ✅ NOTIFICACIÓN IN-APP */
+        .in-app-notification {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            right: 1rem;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            display: none;
+            align-items: center;
+            z-index: 2000;
+            animation: slideInFromTop 0.3s ease;
+            cursor: pointer;
+        }
+        .in-app-notification.active { display: flex; }
+        .in-app-notification-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.125rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        .in-app-notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .in-app-notification-title {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            margin-bottom: 0.25rem;
+        }
+        .in-app-notification-message {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        @keyframes slideInFromTop {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
         .tabs { display: flex; background: var(--bg-white); border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .tab { flex: 1; padding: 0.875rem 0.5rem; text-align: center; cursor: pointer; border: none; background: none; color: var(--text-secondary); font-size: 0.8125rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s; }
         .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--active); }
@@ -84,24 +170,8 @@
         .chat-info { flex: 1; }
         .chat-info h2 { font-size: 1rem; font-weight: 500; margin-bottom: 0.125rem; }
         .chat-status { font-size: 0.75rem; opacity: 0.85; }
-        
-        /* ✅ CORRECCIÓN: activeChatArea debe ser flex column */
-        #activeChatArea {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        
-        /* ✅ CORRECCIÓN: messages-wrapper con flex: 1 y overflow */
-        .messages-wrapper {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            position: relative;
-            -webkit-overflow-scrolling: touch;
-            min-height: 0;
-        }
-        
+        #activeChatArea { display: flex; flex-direction: column; height: 100%; }
+        .messages-wrapper { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; -webkit-overflow-scrolling: touch; min-height: 0; }
         .messages-container { min-height: 100%; padding: 1rem; display: flex; flex-direction: column; justify-content: flex-end; }
         .message { max-width: 80%; margin-bottom: 0.5rem; display: flex; animation: fadeInMessage 0.25s ease; }
         .message.sent { justify-content: flex-end; }
@@ -114,18 +184,7 @@
         .message-time { font-size: 0.6875rem; color: var(--text-secondary); }
         .message-status { font-size: 0.875rem; color: var(--primary); margin-left: 0.25rem; }
         .view-once-badge { display: inline-block; background: var(--danger); color: white; padding: 0.125rem 0.5rem; border-radius: 10px; font-size: 0.625rem; margin-left: 0.5rem; }
-        
-        /* ✅ CORRECCIÓN: chat-input-area con flex-shrink: 0 */
-        .chat-input-area {
-            background: var(--bg-white);
-            border-top: 1px solid var(--border);
-            flex-shrink: 0;
-            padding: 0.75rem 1rem;
-            padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-            position: relative;
-            z-index: 10;
-        }
-        
+        .chat-input-area { background: var(--bg-white); border-top: 1px solid var(--border); flex-shrink: 0; padding: 0.75rem 1rem; padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); position: relative; z-index: 10; }
         .image-preview-container { display: none; padding: 0.75rem; background: var(--bg-light); border-radius: 8px; margin-bottom: 0.75rem; }
         .image-preview-container.active { display: block; }
         .image-preview { max-width: 150px; max-height: 150px; border-radius: 8px; margin-bottom: 0.75rem; }
@@ -173,13 +232,32 @@
             .btn-header:hover { background: rgba(255, 255, 255, 0.1); }
             .message { max-width: 65%; }
             .code-display { flex-direction: row; align-items: center; }
+            .in-app-notification { left: 50%; transform: translateX(-50%); right: auto; max-width: 400px; }
         }
     </style>
 </head>
 <body>
     <div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div></div>
+    
+    <!-- ✅ NOTIFICACIÓN IN-APP -->
+    <div class="in-app-notification" id="inAppNotification" onclick="app.openNotificationChat()">
+        <div class="in-app-notification-avatar" id="notifAvatar">U</div>
+        <div class="in-app-notification-content">
+            <div class="in-app-notification-title" id="notifTitle">Nuevo mensaje</div>
+            <div class="in-app-notification-message" id="notifMessage">...</div>
+        </div>
+    </div>
+    
     <div class="app-container">
         <div class="sidebar" id="sidebar">
+            <!-- ✅ BANNER PIDIENDO PERMISO -->
+            <div class="notification-banner" id="notificationBanner">
+                <div class="notification-banner-text">
+                    🔔 Activa las notificaciones para no perderte ningún mensaje
+                </div>
+                <button class="btn-enable-notifications" onclick="app.requestNotificationPermission()">Activar</button>
+            </div>
+            
             <div class="sidebar-header">
                 <h1 class="sidebar-title">🔐 Chat Cifrado</h1>
                 <div class="header-icons">
@@ -289,6 +367,12 @@
     <div class="modal-overlay image-viewer" id="imageViewer" onclick="app.closeImageViewer()"><img id="viewerImage" src="" alt=""></div>
     <input type="file" id="imageInput" accept="image/*" capture="environment" class="hidden" onchange="app.handleImageSelect(event)">
     <input type="file" id="profilePhotoInput" accept="image/*" class="hidden" onchange="app.handleProfilePhotoSelect(event)">
+    
+    <!-- ✅ SONIDO DE NOTIFICACIÓN -->
+    <audio id="notificationSound" preload="auto">
+        <source src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMAAUFBQUFCIiIiIiIjAwMDAwPj4+Pj4+TExMTExZWVlZWVlnZ2dnZ3V1dXV1dYODg4ODkZGRkZGRn5+fn5+frKysrKy6urq6urrIyMjIyNbW1tbW1uTk5OTk8vLy8vLy//////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAQKAAAAAAAAHjBNKXNIAAAAAAAAAAAAAA//sQxAADS8HKwGYeACEQiTc8wAABp2mJhoQTBkkkRjGEMwsGwGBjVjAIIBEMTCGAAHOYIgcKAAcBhwOJQ/hB+CDxBhwOAQWB4P//+YHg8HAA8HBYAw4P///g8H//5w4P/8Hg+D//+cHBYHgMoO/+EaI4PgYAF//sQxA2BAIAHO4wAABEwiDWIwAAg+eeLSU3///+VElK4aElJRVQgWMYRgmCYJg2DQKg8CAdAwFBUBQWA0CQNBYHQbB4P+BhwOAR8Ph+BgGBAhAAAIDAfD4HBD/4cAIAgCAQHH4AB/+BsOEQaDQa//+gaDwf/6Dwf/+gYH//sQxBeCAARvT70AAACZCS5gAAAD/wOD4GA4P+S4Ph9WcsFgOHAcP/w4HA4HADgcKHJcOBz/+h0Pjh/+h////0P////o////T////+f////m/////wIggEigFg////h////4YAgCAIAgv/+hWE0R//sQxCYAAARfO70AAAEPiGZ0AAAA0Gh0Ol4LBYv////gqOi4aDw6P/4aUMdGg0Ol0Gh0f////R0dAQBAEA4BA//+CAQBAEA4P/8AYf/wNP///9H////0f////R0B+BAEAf//wCAf///xFDWE4f/////sQxDkAAAR7R6wAABERiCb1QAAA+Dw6HQOB0GgcHQ0g7////8DgcAQBAEAQBAH/8Awf/+D/////h////4P////w////+D4P/////gABAEAQBAP///wGH/////8f////j////4///////////////sQxEeAAASDT6AAAAEIhyc0AAAA8f////j/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////sQxFiAAAR/M4AAABEMS+XAAAAAP////////////////////////////////////////////////////////////////////////////w===" type="audio/mp3">
+    </audio>
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -309,6 +393,7 @@
                 this.isMobile = window.innerWidth < 768;
                 this.settings = { notifications: true, onlineStatus: true, readReceipts: true };
                 this.onlineUsers = new Set(); this.pendingImage = null; this.editingContact = null;
+                this.pendingNotification = null;
                 window.addEventListener('resize', () => {
                     const prev = this.isMobile; this.isMobile = window.innerWidth < 768;
                     if (prev !== this.isMobile) this.updateLayout();
@@ -330,7 +415,7 @@
                     this.loadContacts();
                     await this.migrateContacts();
                     this.loadSettings();
-                    this.requestNotificationPermission();
+                    this.checkNotificationPermission();
                     this.renderContacts();
                     this.setupEventListeners();
                     this.setupFirebaseListeners();
@@ -344,6 +429,100 @@
                     document.getElementById('loadingOverlay').style.display = 'none';
                 }
             }
+            
+            // ✅ VERIFICAR Y PEDIR PERMISO DE NOTIFICACIONES
+            checkNotificationPermission() {
+                if ('Notification' in window && this.settings.notifications) {
+                    if (Notification.permission === 'default') {
+                        // Mostrar banner pidiendo permiso
+                        document.getElementById('notificationBanner').classList.add('active');
+                    } else if (Notification.permission === 'denied') {
+                        // Mostrar que está bloqueado
+                        document.getElementById('notificationBanner').classList.add('active');
+                        document.querySelector('.notification-banner-text').textContent = '🚫 Las notificaciones están bloqueadas. Ve a ajustes del navegador para activarlas.';
+                        document.querySelector('.btn-enable-notifications').style.display = 'none';
+                    }
+                }
+            }
+            
+            async requestNotificationPermission() {
+                if ('Notification' in window) {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        document.getElementById('notificationBanner').classList.remove('active');
+                        this.showNotification('✅ Notificaciones activadas');
+                        // Enviar notificación de prueba
+                        this.showFullNotification('Chat Cifrado', '¡Listo! Ahora recibirás notificaciones');
+                    } else {
+                        this.showNotification('❌ Permiso denegado');
+                    }
+                }
+            }
+            
+            // ✅ MOSTRAR NOTIFICACIÓN COMPLETA (Browser + In-App + Sonido + Vibración)
+            showFullNotification(title, body, contactId = null) {
+                if (!this.settings.notifications) return;
+                
+                // 1. ✅ SONIDO
+                try {
+                    const audio = document.getElementById('notificationSound');
+                    audio.currentTime = 0;
+                    audio.play().catch(e => console.log('No se pudo reproducir sonido'));
+                } catch (e) {}
+                
+                // 2. ✅ VIBRACIÓN (móvil)
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+                
+                // 3. ✅ NOTIFICACIÓN DEL NAVEGADOR
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    const notif = new Notification(title, {
+                        body,
+                        icon: '/icon.png',
+                        badge: '/icon.png',
+                        tag: 'chat-message',
+                        renotify: true,
+                        requireInteraction: false
+                    });
+                    
+                    // Al hacer clic, abrir el chat
+                    if (contactId) {
+                        notif.onclick = () => {
+                            window.focus();
+                            this.selectContact(contactId);
+                            notif.close();
+                        };
+                    }
+                }
+                
+                // 4. ✅ NOTIFICACIÓN IN-APP (dentro de la interfaz)
+                if (contactId) {
+                    const contact = this.contacts.find(c => c.id === contactId);
+                    if (contact) {
+                        document.getElementById('notifTitle').textContent = contact.name;
+                        document.getElementById('notifMessage').textContent = body;
+                        document.getElementById('notifAvatar').textContent = contact.name.charAt(0).toUpperCase();
+                        this.pendingNotification = contactId;
+                        
+                        const notifEl = document.getElementById('inAppNotification');
+                        notifEl.classList.add('active');
+                        
+                        // Ocultar después de 4 segundos
+                        setTimeout(() => {
+                            notifEl.classList.remove('active');
+                        }, 4000);
+                    }
+                }
+            }
+            
+            openNotificationChat() {
+                if (this.pendingNotification) {
+                    this.selectContact(this.pendingNotification);
+                    document.getElementById('inAppNotification').classList.remove('active');
+                }
+            }
+            
             async loadOrCreateIdentity() {
                 if (useAuth) {
                     const snapshot = await database.ref(`userIds/${this.firebaseUid}`).once('value');
@@ -433,16 +612,6 @@
                 const key = useAuth ? `contacts_${this.firebaseUid}` : `contacts_${this.userId}`;
                 this.saveToStorage(key, this.contacts);
             }
-            requestNotificationPermission() {
-                if ('Notification' in window && Notification.permission === 'default' && this.settings.notifications) {
-                    Notification.requestPermission();
-                }
-            }
-            showSystemNotification(title, body) {
-                if ('Notification' in window && Notification.permission === 'granted' && this.settings.notifications) {
-                    new Notification(title, { body, icon: '/icon.png' });
-                }
-            }
             setupFirebaseListeners() {
                 const myKey = useAuth ? this.firebaseUid : this.userId;
                 database.ref(`messages/${myKey}`).on('child_added', snap => {
@@ -491,7 +660,9 @@
                     } else {
                         contact.unreadCount = (contact.unreadCount || 0) + 1;
                         if (!contact.muted) {
-                            this.showSystemNotification(contact.name, msg.text || '📷 Imagen');
+                            // ✅ NOTIFICACIÓN COMPLETA
+                            const preview = msg.text || '📷 Imagen';
+                            this.showFullNotification(contact.name, preview, contact.id);
                         }
                     }
                     this.saveContacts();
@@ -810,8 +981,10 @@
                 this.settings.notifications = !this.settings.notifications;
                 document.getElementById('toggleNotifications').classList.toggle('active');
                 this.saveSettings();
-                if (this.settings.notifications && 'Notification' in window && Notification.permission === 'default') {
-                    Notification.requestPermission();
+                if (this.settings.notifications) {
+                    this.checkNotificationPermission();
+                } else {
+                    document.getElementById('notificationBanner').classList.remove('active');
                 }
             }
             toggleOnlineStatus() {
